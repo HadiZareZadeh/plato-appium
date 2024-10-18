@@ -267,11 +267,13 @@ def is_rank_game_played(d: webdriver.Remote):
                         raise Exception("can't find progress bar")
                     ff = False
                     try:
-                        assert "/" in d.find_element(By.ID, "plato_conversation_time").text
+                        assert "/" in d.find_element(By.ID,
+                                                     "plato_conversation_time").text
                         ff = True
                     except Exception as e:
                         try:
-                            assert "/" in d.find_element(By.ID, "game_type_time").text
+                            assert "/" in d.find_element(By.ID,
+                                                         "game_type_time").text
                             ff = True
                         except Exception as e:
                             pass
@@ -325,6 +327,21 @@ def select_game(d: webdriver.Remote, game_name: str):
     return False
 
 
+def is_game_closed(d: webdriver.Remote):
+    screenshot = d.get_screenshot_as_png()
+    image = Image.open(io.BytesIO(screenshot))
+    width, height = image.size
+    x = int(width * 0.5)
+    y = int(height * 0.5)
+    pixel_color = image.getpixel((x, y))
+    white = (255, 255, 255)
+
+    def color_distance(c1, c2):
+        return sum((a - b) ** 2 for a, b in zip(c1, c2)) ** 0.5
+    res = 50 > color_distance(pixel_color, white)
+    return res
+
+
 def cribbage_is_my_turn(d: webdriver.Remote):
     "when it's yellow, it's my turn: returns True"
     screenshot = d.get_screenshot_as_png()
@@ -358,22 +375,43 @@ def play_latest_rank_season(d: webdriver.Remote):
             raise Exception(
                 "couldn't find ranked season matchmaking (maybe net problem)")
     found_matchmaking_buttons: list[tuple[WebElement, str]] = []
-    while 1:
-        found_new = False
+    s = time.time()
+    flag = True
+    while flag:
         for matchmaking_title in d.find_elements(By.ID, "enterable_item_title"):
             try:
                 txt = matchmaking_title.text
-                if txt not in [x[1] for x in found_matchmaking_buttons]:
-                    found_matchmaking_buttons.append((matchmaking_title, txt))
-                    found_new = True
+                if 'rank' not in txt.lower():
+                    flag = False
             except Exception as e:
                 pass
-        if not found_new:
+        if time.time() - s > 30:
+            raise Exception(
+                "couldn't find ranked season matchmaking (maybe net problem)")
+    s = time.time()
+    while 1:
+        while 1:
+            found_new = False
+            for matchmaking_title in d.find_elements(By.ID, "enterable_item_title"):
+                try:
+                    txt = matchmaking_title.text
+                    if txt not in [x[1] for x in found_matchmaking_buttons]:
+                        found_matchmaking_buttons.append(
+                            (matchmaking_title, txt))
+                        found_new = True
+                except Exception as e:
+                    pass
+            if not found_new:
+                break
+            for _ in range(4):
+                d.press_keycode(20)
+        if len(found_matchmaking_buttons) > 0:
+            found_matchmaking_buttons[-1][0].click()
             break
-        for _ in range(4):
-            d.press_keycode(20)
-    if found_matchmaking_buttons:
-        found_matchmaking_buttons[-1][0].click()
+        else:
+            if time.time() - s > 30:
+                raise Exception(
+                    "couldn't find ranked season matchmaking (maybe net problem)")
     WebDriverWait(d, 10).until(
         EC.element_to_be_clickable((By.ID, 'join_button'))).click()
     sleep(3)
@@ -534,7 +572,7 @@ def run_instance(instance: dict):
     instance_system_port = instance["system_port"]
     instance_adb_port = instance["adb_port"]
     device_id = launch_instance(instance)
-    d = None
+    d: webdriver.Remote = None
 
     def safe_quit():
         try:
@@ -543,6 +581,7 @@ def run_instance(instance: dict):
             pass
         stop_appium_server(instance_appium_port)
         quit_ldplayer_instance_by_index(instance_index)
+        sleep(5)
 
     logging.info(f"Starting Appium Server for instance: {instance_name}")
     run_appium_server(instance_appium_port)
@@ -560,10 +599,14 @@ def run_instance(instance: dict):
                 if not is_rank_game_played(d):
                     select_game(d, 'Cribbage')
                     play_latest_rank_season(d)
-                    if cribbage_is_my_turn(d):
+                    sleep(2)
+                    if is_game_closed(d):
                         d.back()
                     else:
-                        resign_from_game(d)
+                        if cribbage_is_my_turn(d):
+                            d.back()
+                        else:
+                            resign_from_game(d)
                     d.back()
                 else:
                     logging.info(
@@ -577,7 +620,7 @@ def run_instance(instance: dict):
                 safe_quit()
                 raise e
             except Exception as e:
-                if retry <= 0 :
+                if retry <= 0:
                     safe_quit()
                     return instance_index
                 retry -= 1
@@ -601,7 +644,8 @@ def main():
     start_consumer_thread()
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         instance_cycle = itertools.cycle(all_instances)
-        futures = [executor.submit(run_instance, next(instance_cycle)) for _ in range(max_workers)]
+        futures = [executor.submit(run_instance, next(
+            instance_cycle)) for _ in range(max_workers)]
         while True:
             done, undone = concurrent.futures.wait(
                 futures, return_when=concurrent.futures.FIRST_COMPLETED)
