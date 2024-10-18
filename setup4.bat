@@ -9,7 +9,7 @@ if %errorlevel% neq 0 (
 )
 
 setlocal
-setx /M ANDROID_HOME "C:\Users\moj\AppData\Local\Android\Sdk"
+setx /M ANDROID_HOME "C:\Users\%username%\AppData\Local\Android\Sdk"
 setx /M JAVA_HOME "C:\Program Files\Java\jdk-17"
 
 set /p NEW_PATH="where did you install LD Player: "
