@@ -29,6 +29,7 @@ import queue
 import logging
 from PIL import Image
 import io
+import schedule
 
 logging.basicConfig(
     level=logging.INFO,
@@ -66,6 +67,7 @@ coin_data_queue = queue.Queue()
 coin_file_lock = threading.Lock()
 COIN_FILENAME = "coin_balance.xlsx"
 coin_consumer_thread: threading.Thread = None
+reset_log_file_thread: threading.Thread = None
 
 
 def coin_balance_consumer():
@@ -75,6 +77,7 @@ def coin_balance_consumer():
             break
         save_coin_balance(instance_name, package_name, balance, COIN_FILENAME)
         coin_data_queue.task_done()
+        schedule.run_pending()
 
 
 def save_to_queue(instance_name: str, package_name: str, balance: str):
@@ -415,6 +418,7 @@ def play_latest_rank_season(d: webdriver.Remote):
     WebDriverWait(d, 10).until(
         EC.element_to_be_clickable((By.ID, 'join_button'))).click()
     sleep(3)
+    s = time.time()
     while 1:
         try:
             el = d.find_element(By.ID, 'enterable_item_message')
@@ -423,7 +427,9 @@ def play_latest_rank_season(d: webdriver.Remote):
             el.click()
             break
         except:
-            pass
+            if time.time() - s > 10:
+                raise Exception(
+                    "couldn't find ranked season matchmaking (maybe net problem)")
         sleep(0.5)
     sleep(3)
     WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
@@ -587,6 +593,8 @@ def run_instance(instance: dict):
     run_appium_server(instance_appium_port)
     installed_platos = list_installed_plato(device_id, instance_adb_port)
     for package_name in installed_platos:
+        if is_processed_app_logged(instance_index, package_name):
+            continue
         retry = 5
         while 1:
             try:
@@ -599,7 +607,7 @@ def run_instance(instance: dict):
                 if not is_rank_game_played(d):
                     select_game(d, 'Cribbage')
                     play_latest_rank_season(d)
-                    sleep(2)
+                    sleep(5)
                     if is_game_closed(d):
                         d.back()
                     else:
@@ -611,6 +619,7 @@ def run_instance(instance: dict):
                 else:
                     logging.info(
                         f"on instance {instance_name} for {package_name} app quest is done")
+                    log_processed_app(instance_index, package_name)
                 balance = get_coins(d)
                 save_to_queue(instance_name, package_name, balance)
                 d.terminate_app(package_name)
@@ -638,7 +647,65 @@ def chunk_list(input_list, chunk_size=4):
     return [input_list[i:i + chunk_size] for i in range(0, len(input_list), chunk_size)]
 
 
+def get_file_done_path_for_instance(instance_index: str):
+    return "done/" + str(instance_index)
+
+
+def check_for_reset_log_file():
+    while True:
+        schedule.run_pending()
+        sleep(60)
+
+def initialize_log():
+    all_instances = list_ldplayer_instances()
+    os.makedirs("done/", exist_ok=True)
+    for instance in all_instances:
+        instance_index = instance["index"]
+        try:
+            with open(get_file_done_path_for_instance(instance_index), "r") as file:
+                json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            with open(get_file_done_path_for_instance(instance_index), "w") as file:
+                json.dump({}, file)
+    schedule.every().day.at("03:30").do(reset_log_file)
+    th = threading.Thread(target=check_for_reset_log_file, daemon=True)
+    th.start()
+
+
+def is_processed_app_logged(instance_index: str, app_name: str):
+    with open(get_file_done_path_for_instance(instance_index), "r") as file:
+        data = json.load(file)
+    today = datetime.now().strftime("%Y-%m-%d")
+    if today not in data:
+        data[today] = {}
+    if instance_index not in data[today]:
+        data[today][instance_index] = []
+    return app_name in data[today][instance_index]
+
+
+def log_processed_app(instance_index: str, app_name: str):
+    with open(get_file_done_path_for_instance(instance_index), "r") as file:
+        data = json.load(file)
+    today = datetime.now().strftime("%Y-%m-%d")
+    if today not in data:
+        data[today] = {}
+    if instance_index not in data[today]:
+        data[today][instance_index] = []
+    data[today][instance_index].append(app_name)
+    with open(get_file_done_path_for_instance(instance_index), "w") as file:
+        json.dump(data, file, indent=4)
+    return False
+
+
+def reset_log_file():
+    all_instances = list_ldplayer_instances()
+    for instance_index in all_instances:
+        with open(get_file_done_path_for_instance(instance_index), "w") as file:
+            json.dump({}, file)
+
+
 def main():
+    initialize_log()
     all_instances = list_ldplayer_instances()
     max_workers = config['total_launched_instances']
     start_consumer_thread()
