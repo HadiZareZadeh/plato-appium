@@ -24,7 +24,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
-from datetime import datetime
+from datetime import datetime, timezone
 import queue
 import logging
 from PIL import Image
@@ -38,8 +38,9 @@ logging.basicConfig(
 )
 
 ldconsole_path = 'ldconsole.exe'
+config_path = 'config.json'
 
-with open('config.json') as f:
+with open(config_path) as f:
     config = json.load(f)
 config['instances_index'] = config['instances_index'].split(',')
 
@@ -544,6 +545,16 @@ def stop_appium_server(appium_server_port):
         logging.info(f"No process found on port {appium_server_port}")
 
 
+def click_lets_go(d: webdriver.Remote):
+    try:
+        WebDriverWait(d, 7).until(EC.visibility_of_element_located(
+            (By.ID, 'start_screen_button_label'))).click()
+    except:
+        pass
+    WebDriverWait(d, 15).until(EC.visibility_of_element_located(
+        (By.ID, 'plato_tab_home')))
+
+
 launch_instance_appium_server_lock = threading.Lock()
 
 
@@ -604,6 +615,7 @@ def run_instance(instance: dict):
                                          instance_adb_port, device_id, package_name, app_activity)
                 logging.info(f"launching app {package_name}")
                 d.activate_app(package_name)
+                click_lets_go(d)
                 if not is_rank_game_played(d):
                     select_game(d, 'Cribbage')
                     play_latest_rank_season(d)
@@ -656,6 +668,7 @@ def check_for_reset_log_file():
         schedule.run_pending()
         sleep(60)
 
+
 def initialize_log():
     all_instances = list_ldplayer_instances()
     os.makedirs("done/", exist_ok=True)
@@ -675,7 +688,7 @@ def initialize_log():
 def is_processed_app_logged(instance_index: str, app_name: str):
     with open(get_file_done_path_for_instance(instance_index), "r") as file:
         data = json.load(file)
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if today not in data:
         data[today] = {}
     if instance_index not in data[today]:
@@ -686,7 +699,7 @@ def is_processed_app_logged(instance_index: str, app_name: str):
 def log_processed_app(instance_index: str, app_name: str):
     with open(get_file_done_path_for_instance(instance_index), "r") as file:
         data = json.load(file)
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if today not in data:
         data[today] = {}
     if instance_index not in data[today]:

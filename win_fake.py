@@ -24,7 +24,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
-from datetime import datetime, timezone
+from datetime import datetime
 import queue
 import logging
 from PIL import Image
@@ -38,11 +38,25 @@ logging.basicConfig(
 )
 
 ldconsole_path = 'ldconsole.exe'
-config_path = 'config.json'
+config_path = 'config-win-fake.json'
+config: dict = {}
+config_lock = threading.Lock()
 
-with open(config_path) as f:
-    config = json.load(f)
-config['instances_index'] = config['instances_index'].split(',')
+
+def init_config():
+    global config
+    with config_lock:
+        with open(config_path) as f:
+            config = json.load(f)
+
+
+def save_config():
+    global config
+    with config_lock:
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=4)
+
+init_config()
 
 
 def convert_to_float(s: str):
@@ -64,67 +78,6 @@ def find_process_by_port(port):
     return None
 
 
-coin_data_queue = queue.Queue()
-coin_file_lock = threading.Lock()
-COIN_FILENAME = "coin_balance.xlsx"
-coin_consumer_thread: threading.Thread = None
-reset_log_file_thread: threading.Thread = None
-
-
-def coin_balance_consumer():
-    while True:
-        instance_name, package_name, balance = coin_data_queue.get()
-        if instance_name is None:
-            break
-        save_coin_balance(instance_name, package_name, balance, COIN_FILENAME)
-        coin_data_queue.task_done()
-        schedule.run_pending()
-
-
-def save_to_queue(instance_name: str, package_name: str, balance: str):
-    coin_data_queue.put((instance_name, package_name, balance))
-
-
-def save_coin_balance(instance_name: str, package_name: str, balance: str, filename: str = "coin_balance.xlsx"):
-    package_column = f"{instance_name} - Package Name"
-    balance_column = f"{instance_name} - Balance"
-    updated_at_column = f"{instance_name} - Updated At"
-    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    with coin_file_lock:
-        if os.path.exists(filename):
-            df = pd.read_excel(filename)
-        else:
-            df = pd.DataFrame()
-        if package_column not in df.columns:
-            df[package_column] = pd.Series(dtype=object)
-            df[balance_column] = pd.Series(dtype=object)
-            df[updated_at_column] = pd.Series(dtype=object)
-        if package_name in df[package_column].values:
-            row_index = df[df[package_column] == package_name].index[0]
-            df.at[row_index, balance_column] = convert_to_float(balance)
-            df.at[row_index, updated_at_column] = current_time
-        else:
-            num_entries_in_instance = df[package_column].count()
-            df.at[num_entries_in_instance, package_column] = package_name
-            df.at[num_entries_in_instance,
-                  balance_column] = convert_to_float(balance)
-            df.at[num_entries_in_instance, updated_at_column] = current_time
-        df.to_excel(filename, index=False)
-
-
-def start_consumer_thread():
-    global coin_consumer_thread
-    coin_consumer_thread = threading.Thread(
-        target=coin_balance_consumer, daemon=True)
-    coin_consumer_thread.start()
-
-
-def stop_consumer_thread():
-    global coin_consumer_thread
-    coin_data_queue.put((None, None, None))
-    coin_consumer_thread.join()
-
-
 def list_ldplayer_instances():
     command = f'"{ldconsole_path}" list2'
     result = subprocess.run(command, stdout=subprocess.PIPE, shell=True)
@@ -136,11 +89,6 @@ def list_ldplayer_instances():
     instance_names = []
     for line in instances:
         line = line.split(',')
-        if line[0] not in config['instances_index']:
-            appium_port += 1
-            system_port += 1
-            adb_port += 1
-            continue
         instance_names.append({
             "index": line[0],
             "name": line[1],
@@ -407,7 +355,7 @@ def play_latest_rank_season(d: webdriver.Remote):
                     pass
             if not found_new:
                 break
-            for _ in range(4):
+            for _ in range(5):
                 d.press_keycode(20)
         if len(found_matchmaking_buttons) > 0:
             found_matchmaking_buttons[-1][0].click()
@@ -445,12 +393,6 @@ def tap_using_percent(d: webdriver.Remote, x_percent: float, y_percent: float):
     x = int(screen_width * x_percent)
     y = int(screen_height * y_percent)
     d.tap([(x, y)], 100)
-    # actions = ActionBuilder(d)
-    # finger = actions.add_pointer_input("touch", "finger")
-    # finger.add_action(finger.create_pointer_move(duration=0, x=x, y=y))
-    # finger.add_action(finger.create_pointer_down(button=0))
-    # finger.add_action(finger.create_pointer_up(button=0))
-    # actions.perform()
 
 
 def resign_from_game(d:  webdriver.Remote):
@@ -484,6 +426,80 @@ def go_to_shop_tab(d: webdriver.Remote):
 def go_to_home_tab(d: webdriver.Remote):
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'plato_tab_home'))).click()
+
+
+def go_to_friend_tab(d: webdriver.Remote):
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'plato_image_people'))).click()
+
+
+def add_friend(d: webdriver.Remote):
+    go_to_friend_tab(d)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'friend_name_text_view')))
+    for el in d.find_elements(By.ID, 'friend_name_text_view'):
+        if el.text.strip().lower() == '@PlatoViP'.lower():
+            el.click()
+            break
+    else:
+        raise Exception("couldn't find the plato vip chat")
+    init_config()
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'plato_conversation_chat_box'))).send_keys(config['friend_link'])
+    WebDriverWait(d, 5).until(EC.visibility_of_element_located(
+        (By.ID, 'plato_button_send'))).click()
+    sleep(5)
+    friend_name = d.find_elements(
+        By.ID, 'message_deep_link_title')[-1].text.strip()
+    d.find_elements(By.ID, 'message_deep_link_subtitle')[-1].click()
+    try:
+        WebDriverWait(d, 5).until(EC.visibility_of_element_located(
+            (By.ID, 'action_button_accept'))).click()
+    except:
+        pass
+    sleep(2)
+    d.back()
+    return friend_name
+
+
+def create_game_with_friend(d: webdriver.Remote, friend_name: str):
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'play_with_friend_label'))).click()
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'friend_name_text_view')))
+    for el in d.find_elements(By.ID, 'friend_name_text_view'):
+        if el.text.strip().lower() == friend_name.lower():
+            el.click()
+            break
+    else:
+        raise Exception("couldn't find ranked season matchmaking (maybe net problem)")
+
+    xpath = "//android.widget.LinearLayout//android.widget.LinearLayout//android.widget.TextView[@text='2']"
+    try:
+        d.find_element(By.XPATH, xpath).click()
+        sleep(1)
+    except Exception as e:
+        pass
+
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'button_play_view'))).click()
+    
+    sleep(3)
+    WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
+                                                                     'plato_container_game_spinner')))
+    sleep(1)
+
+
+# def has_player_joined(d: webdriver.Remote):
+#     screenshot = d.get_screenshot_as_png()
+#     image = Image.open(io.BytesIO(screenshot))
+#     width, height = image.size
+#     x1 = int(width * 0.8)
+#     y1 = int(height * 0.2)
+#     x2 = int(width * 1)
+#     y2 = int(height * 0.25)
+#     cropped_image = image.crop((x1, y1, x2, y2))
+#     text = pytesseract.image_to_string(cropped_image)
 
 
 def run_appium_server(appium_server_port):
@@ -545,16 +561,6 @@ def stop_appium_server(appium_server_port):
         logging.info(f"No process found on port {appium_server_port}")
 
 
-def click_lets_go(d: webdriver.Remote):
-    try:
-        WebDriverWait(d, 7).until(EC.visibility_of_element_located(
-            (By.ID, 'start_screen_button_label'))).click()
-    except:
-        pass
-    WebDriverWait(d, 15).until(EC.visibility_of_element_located(
-        (By.ID, 'plato_tab_home')))
-
-
 launch_instance_appium_server_lock = threading.Lock()
 
 
@@ -602,10 +608,10 @@ def run_instance(instance: dict):
 
     logging.info(f"Starting Appium Server for instance: {instance_name}")
     run_appium_server(instance_appium_port)
-    installed_platos = list_installed_plato(device_id, instance_adb_port)
-    for package_name in installed_platos:
-        if is_processed_app_logged(instance_index, package_name):
-            continue
+    installed_platos = list_installed_plato(device_id, instance_adb_port)[:config['number_of_apps_for_win_fake']]
+    installed_platos_cycle = itertools.cycle(installed_platos)
+    while config['total_win_fake'] > 0:
+        package_name = next(installed_platos_cycle)
         retry = 5
         while 1:
             try:
@@ -615,25 +621,17 @@ def run_instance(instance: dict):
                                          instance_adb_port, device_id, package_name, app_activity)
                 logging.info(f"launching app {package_name}")
                 d.activate_app(package_name)
-                click_lets_go(d)
-                if not is_rank_game_played(d):
-                    select_game(d, 'Cribbage')
-                    play_latest_rank_season(d)
-                    sleep(5)
-                    if is_game_closed(d):
-                        d.back()
-                    else:
-                        if cribbage_is_my_turn(d):
-                            d.back()
-                        else:
-                            resign_from_game(d)
+                friend_name = add_friend(d)
+                select_game(d, config['win_fake_game'])
+                for _ in range(5):
+                    if config['total_win_fake'] <= 0:
+                        break
+                    create_game_with_friend(d, friend_name)
+                    sleep(8)
+                    resign_from_game(d)
+                    config['total_win_fake'] -= 1
+                    save_config()
                     d.back()
-                else:
-                    logging.info(
-                        f"on instance {instance_name} for {package_name} app quest is done")
-                    log_processed_app(instance_index, package_name)
-                balance = get_coins(d)
-                save_to_queue(instance_name, package_name, balance)
                 d.terminate_app(package_name)
                 d.quit()
                 break
@@ -659,84 +657,14 @@ def chunk_list(input_list, chunk_size=4):
     return [input_list[i:i + chunk_size] for i in range(0, len(input_list), chunk_size)]
 
 
-def get_file_done_path_for_instance(instance_index: str):
-    return "done/" + str(instance_index)
-
-
-def check_for_reset_log_file():
-    while True:
-        schedule.run_pending()
-        sleep(60)
-
-
-def initialize_log():
-    all_instances = list_ldplayer_instances()
-    os.makedirs("done/", exist_ok=True)
-    for instance in all_instances:
-        instance_index = instance["index"]
-        try:
-            with open(get_file_done_path_for_instance(instance_index), "r") as file:
-                json.load(file)
-        except (FileNotFoundError, json.JSONDecodeError):
-            with open(get_file_done_path_for_instance(instance_index), "w") as file:
-                json.dump({}, file)
-    schedule.every().day.at("03:30").do(reset_log_file)
-    th = threading.Thread(target=check_for_reset_log_file, daemon=True)
-    th.start()
-
-
-def is_processed_app_logged(instance_index: str, app_name: str):
-    with open(get_file_done_path_for_instance(instance_index), "r") as file:
-        data = json.load(file)
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    if today not in data:
-        data[today] = {}
-    if instance_index not in data[today]:
-        data[today][instance_index] = []
-    return app_name in data[today][instance_index]
-
-
-def log_processed_app(instance_index: str, app_name: str):
-    with open(get_file_done_path_for_instance(instance_index), "r") as file:
-        data = json.load(file)
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    if today not in data:
-        data[today] = {}
-    if instance_index not in data[today]:
-        data[today][instance_index] = []
-    data[today][instance_index].append(app_name)
-    with open(get_file_done_path_for_instance(instance_index), "w") as file:
-        json.dump(data, file, indent=4)
-    return False
-
-
-def reset_log_file():
-    all_instances = list_ldplayer_instances()
-    for instance_index in all_instances:
-        with open(get_file_done_path_for_instance(instance_index), "w") as file:
-            json.dump({}, file)
-
-
 def main():
-    initialize_log()
-    all_instances = list_ldplayer_instances()
-    max_workers = config['total_launched_instances']
-    start_consumer_thread()
+    all_instances = list_ldplayer_instances(
+    )[1:config['number_of_instances_for_win_fake']+1]
+    max_workers = config['number_of_instances_for_win_fake']
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        instance_cycle = itertools.cycle(all_instances)
-        futures = [executor.submit(run_instance, next(
-            instance_cycle)) for _ in range(max_workers)]
-        while True:
-            done, undone = concurrent.futures.wait(
-                futures, return_when=concurrent.futures.FIRST_COMPLETED)
-            for future in done:
-                future.result()
-                next_intance = next(instance_cycle)
-                print(f"Resubmitting LDPlayer instance {next_intance}")
-                futures.remove(future)
-                futures.append(executor.submit(run_instance, next_intance))
-    coin_data_queue.join()
-    stop_consumer_thread()
+        futures = [executor.submit(run_instance, instance) for instance in all_instances]
+        for future in concurrent.futures.as_completed(futures):
+            future.result()
 
 
 if __name__ == "__main__":
