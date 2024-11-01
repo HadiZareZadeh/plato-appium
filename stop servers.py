@@ -1,32 +1,7 @@
-import os
 import psutil
-import re
 import subprocess
-import threading
-import time
-import json
-import requests
-import pandas as pd
-from appium import webdriver
-from selenium.webdriver.common.actions.pointer_input import PointerInput
-from selenium.webdriver.common.actions.action_builder import ActionBuilder
-from selenium.webdriver.common.actions import interaction
-from selenium.webdriver.common.action_chains import ActionChains
-from appium.webdriver.common.appiumby import AppiumBy
-from appium.options.common.base import AppiumOptions
-from appium import webdriver
-from appium.options.android import UiAutomator2Options
 from time import sleep
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.remote.webelement import WebElement
-from datetime import datetime
-import queue
 import logging
-from PIL import Image
-import io
 
 logging.basicConfig(
     level=logging.INFO,

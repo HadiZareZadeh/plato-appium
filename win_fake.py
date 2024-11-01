@@ -56,6 +56,7 @@ def save_config():
         with open(config_path, 'w') as f:
             json.dump(config, f, indent=4)
 
+
 init_config()
 
 
@@ -401,7 +402,10 @@ def resign_from_game(d:  webdriver.Remote):
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Resign")'))).click()
     sleep(1)
-    tap_using_percent(d, 0.75, 0.65)
+    if 'table soccer' in config['win_fake_game'].lower():
+        tap_using_percent(d, 0.75, 0.685)
+    else:
+        tap_using_percent(d, 0.75, 0.65)
     sleep(0.7)
     d.back()
 
@@ -472,7 +476,8 @@ def create_game_with_friend(d: webdriver.Remote, friend_name: str):
             el.click()
             break
     else:
-        raise Exception("couldn't find ranked season matchmaking (maybe net problem)")
+        raise Exception(
+            "couldn't find ranked season matchmaking (maybe net problem)")
 
     xpath = "//android.widget.LinearLayout//android.widget.LinearLayout//android.widget.TextView[@text='2']"
     try:
@@ -481,9 +486,23 @@ def create_game_with_friend(d: webdriver.Remote, friend_name: str):
     except Exception as e:
         pass
 
+    if 'chess' in config['win_fake_game']:
+        xpath = "//android.widget.LinearLayout//android.widget.LinearLayout//android.widget.TextView[@text='WHITE']"
+        try:
+            d.find_element(By.XPATH, xpath).click()
+            sleep(1)
+        except Exception as e:
+            pass
+        xpath = "//android.widget.LinearLayout//android.widget.LinearLayout//android.widget.TextView[@text='1M + 0S']"
+        try:
+            d.find_element(By.XPATH, xpath).click()
+            sleep(1)
+        except Exception as e:
+            pass
+
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'button_play_view'))).click()
-    
+
     sleep(3)
     WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
                                                                      'plato_container_game_spinner')))
@@ -608,7 +627,8 @@ def run_instance(instance: dict):
 
     logging.info(f"Starting Appium Server for instance: {instance_name}")
     run_appium_server(instance_appium_port)
-    installed_platos = list_installed_plato(device_id, instance_adb_port)[:config['number_of_apps_for_win_fake']]
+    installed_platos = list_installed_plato(device_id, instance_adb_port)[
+        :config['number_of_apps_for_win_fake']]
     installed_platos_cycle = itertools.cycle(installed_platos)
     while config['total_win_fake'] > 0:
         package_name = next(installed_platos_cycle)
@@ -628,7 +648,8 @@ def run_instance(instance: dict):
                         break
                     create_game_with_friend(d, friend_name)
                     sleep(8)
-                    resign_from_game(d)
+                    if not any([x.lower() in config['win_fake_game'].lower() for x in ['archery', 'gin rummy', 'dungeon tales', 'wordbox', 'plox', 'go fish', 'chess']]):
+                        resign_from_game(d)
                     config['total_win_fake'] -= 1
                     save_config()
                     d.back()
@@ -662,7 +683,8 @@ def main():
     )[1:config['number_of_instances_for_win_fake']+1]
     max_workers = config['number_of_instances_for_win_fake']
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(run_instance, instance) for instance in all_instances]
+        futures = [executor.submit(run_instance, instance)
+                   for instance in all_instances]
         for future in concurrent.futures.as_completed(futures):
             future.result()
 

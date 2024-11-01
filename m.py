@@ -8,7 +8,11 @@ import threading
 import time
 import json
 import requests
+import numpy as np
 import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+from openpyxl.utils import get_column_letter
 from appium import webdriver
 from selenium.webdriver.common.actions.pointer_input import PointerInput
 from selenium.webdriver.common.actions.action_builder import ActionBuilder
@@ -85,6 +89,26 @@ def save_to_queue(instance_name: str, package_name: str, balance: str):
     coin_data_queue.put((instance_name, package_name, balance))
 
 
+def get_fill_color(balance: float) -> PatternFill:
+    if balance >= 10000:
+        return PatternFill(start_color="0029FF52", end_color="0029FF52", fill_type="solid")
+    elif balance <= 0:
+        return PatternFill(start_color="00FF6629", end_color="00FF6629", fill_type="solid")
+    else:
+        start_r, start_g, start_b = 0xFF, 0x66, 0x29
+        end_r, end_g, end_b = 0x29, 0xFF, 0x52
+        try:
+            ratio = balance / 10000
+            b = int(ratio)
+        except:
+            ratio = 0
+        r = int(start_r + (end_r - start_r) * ratio)
+        g = int(start_g + (end_g - start_g) * ratio)
+        b = int(start_b + (end_b - start_b) * ratio)
+        color_hex = f"00{r:02X}{g:02X}{b:02X}"
+        return PatternFill(start_color=color_hex, end_color=color_hex, fill_type="solid")
+
+
 def save_coin_balance(instance_name: str, package_name: str, balance: str, filename: str = "coin_balance.xlsx"):
     package_column = f"{instance_name} - Package Name"
     balance_column = f"{instance_name} - Balance"
@@ -110,6 +134,18 @@ def save_coin_balance(instance_name: str, package_name: str, balance: str, filen
                   balance_column] = convert_to_float(balance)
             df.at[num_entries_in_instance, updated_at_column] = current_time
         df.to_excel(filename, index=False)
+
+        wb = load_workbook(filename)
+        ws = wb.active
+        balance_col_idx = df.columns.get_loc(balance_column) + 1
+        balance_col_letter = get_column_letter(balance_col_idx)
+
+        for row in range(2, len(df) + 2):
+            balance_value = df.at[row - 2, balance_column]
+            fill = get_fill_color(balance_value)
+            ws[f"{balance_col_letter}{row}"].fill = fill
+
+        wb.save(filename)
 
 
 def start_consumer_thread():
@@ -253,13 +289,18 @@ def is_game_favorite(d: webdriver.Remote, game_name: str):
 
 
 def is_rank_game_played(d: webdriver.Remote):
+    sleep(0.4)
     go_to_shop_tab(d)
+    sleep(0.4)
     go_to_home_tab(d)
+    sleep(0.4)
     s = time.time()
     while 1:
         try:
             go_to_shop_tab(d)
+            sleep(0.4)
             go_to_home_tab(d)
+            sleep(0.4)
             ss = time.time()
             while 1:
                 try:
@@ -267,7 +308,7 @@ def is_rank_game_played(d: webdriver.Remote):
                         (By.ID, 'quest_progress_bar'))).text
                     break
                 except:
-                    if time.time() - ss > 20:
+                    if time.time() - ss > 30:
                         raise Exception("can't find progress bar")
                     ff = False
                     try:
@@ -288,7 +329,7 @@ def is_rank_game_played(d: webdriver.Remote):
                         d.press_keycode(20)
             break
         except:
-            if time.time() - s > 60:
+            if time.time() - s > 90:
                 raise Exception("can't find progress bar")
             sleep(0.3)
     try:
