@@ -409,6 +409,7 @@ def resign_from_game(d:  webdriver.Remote):
         tap_using_percent(d, 0.75, 0.65)
         tap_using_percent(d, 0.75, 0.685)
         tap_using_percent(d, 0.75, 0.72)
+        tap_using_percent(d, 0.75, 0.60)
     sleep(0.7)
     d.back()
 
