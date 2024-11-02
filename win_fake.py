@@ -662,7 +662,7 @@ def run_instance(instance: dict):
                         if any([x.lower() in config['win_fake_game'].lower() for x in ['brawlbots']]):
                             sleep(12)
                         else:
-                            sleep(8)
+                            sleep(11)
                         resign_from_game(d)
                     else:
                         d.back()
