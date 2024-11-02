@@ -603,23 +603,30 @@ def launch_instance(instance: dict):
     instance_index = instance["index"]
     instance_name = instance["name"]
     instance_adb_port = instance["adb_port"]
-    with launch_instance_appium_server_lock:
-        while 1:
-            try:
-                logging.info(f"Launching LDPlayer instance: {instance_name}")
-                launch_ldplayer_instance_by_index(
-                    instance_index, instance_adb_port)
-                device_id = wait_for_new_LDPlayer_instance_to_appear_as_a_device(
-                    instance_adb_port)
-                wait_for_device_ready(device_id, instance_adb_port)
-                return device_id
-            except Exception as e:
-                logging.error(
-                    f"failed to launch LDPlayer instance: {instance_name} --------------")
+    while 1:
+        retry = 4
+        with launch_instance_appium_server_lock:
+            while retry > 0:
                 try:
-                    quit_ldplayer_instance_by_index(instance_index)
-                except:
-                    pass
+                    logging.info(f"Launching LDPlayer instance: {instance_name}")
+                    launch_ldplayer_instance_by_index(
+                        instance_index, instance_adb_port)
+                    device_id = wait_for_new_LDPlayer_instance_to_appear_as_a_device(
+                        instance_adb_port)
+                    wait_for_device_ready(device_id, instance_adb_port)
+                    return device_id
+                except Exception as e:
+                    retry -= 1
+                    logging.error(
+                        f"failed to launch LDPlayer instance: {instance_name} --------------")
+                    try:
+                        quit_ldplayer_instance_by_index(instance_index)
+                    except:
+                        pass
+        if retry > 0:
+            break
+        else:
+            sleep(10)
 
 
 def run_instance(instance: dict):
