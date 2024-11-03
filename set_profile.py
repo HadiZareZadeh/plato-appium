@@ -530,16 +530,16 @@ def go_to_home_tab(d: webdriver.Remote):
 def set_profile(d: webdriver.Remote):
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'plato_image_framed_profile'))).click()
-    sleep(0.5)
+    sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'profile_picture_change_button'))).click()
-    sleep(0.5)
+    sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.widget.TextView[@resource-id="android:id/text1" and @text="Choose Photo"]'))).click()
-    sleep(0.5)
+    sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.widget.ImageButton[@content-desc="Show roots"]'))).click()
-    sleep(0.5)
+    sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.widget.TextView[@resource-id="android:id/title" and @text="Images"]'))).click()
     sleep(1)
@@ -554,19 +554,19 @@ def set_profile(d: webdriver.Remote):
     sleep(3)
     WebDriverWait(d, 20).until(EC.invisibility_of_element_located(
         (By.XPATH, '//android.widget.ProgressBar[@resource-id="com.plato.android:id/profile_picture_change_progress"]')))
-    sleep(0.5)
+    sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'bio_bubble_text_view'))).click()
-    sleep(0.5)
+    sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'input_edit_text'))).clear()
-    sleep(0.5)
+    sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'input_edit_text'))).send_keys("""رنک آپ_وین فیک_فروش آیتم شاپ_شارژ پیپ و سکه                                         Tel @platocat""")
-    sleep(0.5)
+    sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.widget.Button[@resource-id="android:id/button1"]'))).click()
-    sleep(1)
+    sleep(5)
 
 
 def run_appium_server(appium_server_port):
