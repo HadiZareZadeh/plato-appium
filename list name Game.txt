@@ -1,6 +1,6 @@
 4 in a row
 archery
-backgmmon
+backgammon
 basketball
 blitz league
 bowling
