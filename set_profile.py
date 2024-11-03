@@ -542,13 +542,13 @@ def set_profile(d: webdriver.Remote):
     sleep(0.5)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.widget.TextView[@resource-id="android:id/title" and @text="Images"]'))).click()
-    sleep(0.5)
+    sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.support.v7.widget.RecyclerView[@resource-id="com.android.documentsui:id/dir_list"]/android.widget.LinearLayout'))).click()
-    sleep(0.5)
+    sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.widget.FrameLayout[@resource-id="com.android.documentsui:id/thumbnail"]'))).click()
-    sleep(0.5)
+    sleep(4)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'crop_image_menu_crop'))).click()
     sleep(3)
