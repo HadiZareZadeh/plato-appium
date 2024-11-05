@@ -406,10 +406,10 @@ def resign_from_game(d:  webdriver.Remote):
     if size['width'] > size['height']:
         tap_using_percent(d, 0.6, 0.79)
     else:
+        tap_using_percent(d, 0.75, 0.60)
         tap_using_percent(d, 0.75, 0.65)
         tap_using_percent(d, 0.75, 0.685)
         tap_using_percent(d, 0.75, 0.72)
-        tap_using_percent(d, 0.75, 0.60)
     sleep(0.7)
     d.back()
 
@@ -641,6 +641,8 @@ def run_instance(instance: dict):
     installed_platos = list_installed_plato(device_id, instance_adb_port)[
         :config['number_of_apps_for_win_fake']]
     installed_platos_cycle = itertools.cycle(installed_platos)
+    has_add_to_friend = []
+    friend_name = ''
     while config['total_win_fake'] > 0:
         package_name = next(installed_platos_cycle)
         retry = 5
@@ -652,7 +654,9 @@ def run_instance(instance: dict):
                                          instance_adb_port, device_id, package_name, app_activity)
                 logging.info(f"launching app {package_name}")
                 d.activate_app(package_name)
-                friend_name = add_friend(d)
+                if package_name not in has_add_to_friend:
+                    friend_name = add_friend(d)
+                    has_add_to_friend.append(package_name)
                 select_game(d, config['win_fake_game'])
                 for _ in range(5):
                     if config['total_win_fake'] <= 0:

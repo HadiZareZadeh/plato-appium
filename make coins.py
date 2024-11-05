@@ -500,7 +500,14 @@ def resign_from_game(d:  webdriver.Remote):
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Resign")'))).click()
     sleep(1)
-    tap_using_percent(d, 0.75, 0.65)
+    size = d.get_window_size()
+    if size['width'] > size['height']:
+        tap_using_percent(d, 0.6, 0.79)
+    else:
+        tap_using_percent(d, 0.75, 0.60)
+        tap_using_percent(d, 0.75, 0.65)
+        tap_using_percent(d, 0.75, 0.685)
+        tap_using_percent(d, 0.75, 0.72)
     sleep(0.7)
     d.back()
 

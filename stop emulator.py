@@ -7,6 +7,18 @@ def get_emulator_list():
     emulators = [line.split()[0] for line in lines if line.startswith("emulator")]
     return emulators
 
+
+def get_offline_devices():
+    result = subprocess.run(['adb', 'devices'], capture_output=True, text=True)
+    lines = result.stdout.strip().split('\n')
+    offline_devices = []
+    for line in lines[1:]:
+        if 'offline' in line:
+            device_id = line.split()[0]
+            offline_devices.append(device_id)
+    return offline_devices
+
+
 def terminate_emulator(emulator):
     subprocess.run(["adb", "-s", emulator, "emu", "kill"], capture_output=True, text=True)
 

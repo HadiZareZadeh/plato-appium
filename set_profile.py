@@ -798,12 +798,17 @@ def main():
     start_consumer_thread()
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         instance_cycle = itertools.cycle(all_instances)
-        futures = [executor.submit(run_instance, next(
-            instance_cycle)) for _ in range(max_workers)]
+        futures = [executor.submit(run_instance, next(instance_cycle)) for _ in range(max_workers)]
+        remaining = len(all_instances) - max_workers
         while True:
+            if remaining <= 0:
+                break
             done, undone = concurrent.futures.wait(
                 futures, return_when=concurrent.futures.FIRST_COMPLETED)
             for future in done:
+                if remaining <= 0:
+                    break
+                remaining -= 1
                 future.result()
                 next_intance = next(instance_cycle)
                 print(f"Resubmitting LDPlayer instance {next_intance}")
@@ -811,7 +816,6 @@ def main():
                 futures.append(executor.submit(run_instance, next_intance))
     coin_data_queue.join()
     stop_consumer_thread()
-
 
 if __name__ == "__main__":
     try:
