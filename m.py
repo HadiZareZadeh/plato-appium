@@ -409,7 +409,36 @@ def is_rank_game_played(d: webdriver.Remote):
     return False
 
 
+def is_game_in_favorite(d: webdriver.Remote, game_name: str):
+    while 1:
+        flag = False
+        try:
+            recycler = WebDriverWait(d, 5).until(EC.visibility_of_element_located(
+                (By.ID, 'favorites_recycler_view')))
+        except:
+            return False
+        for title_element in recycler.find_elements(By.ID, 'title_text_view'):
+            if game_name.lower() == title_element.text.lower().strip():
+                x = title_element.location_in_view['x'] + title_element.size['width']//2
+                y = title_element.location_in_view['y'] - 50
+                d.tap([(x, y)])
+                flag = True
+                break
+        if flag:
+            return True
+        else:
+            size = d.get_window_size()
+            x1 = int(size['width'] * 0.75)
+            y1 = int(size['height'] * 0.25)
+            x2 = int(size['width'] * 0.35)
+            y2 = int(size['height'] * 0.25)
+            d.swipe(x1, y1, x2, y2, 150)
+        
+
 def select_game(d: webdriver.Remote, game_name: str):
+    if is_game_in_favorite(d, game_name):
+        return
+
     game_tab = WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'plato_image_games')))
     game_tab.click()
@@ -427,6 +456,7 @@ def select_game(d: webdriver.Remote, game_name: str):
                 if game_title not in found_games:
                     if game_name.lower() == game_title.lower():
                         game.click()
+                        toggle_favorite(d)
                         return True
                     found_games.append(game_title)
                     found_new = True
