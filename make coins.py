@@ -209,6 +209,30 @@ def quit_ldplayer_instance_by_index(instance_index):
     subprocess.Popen(f'"{ldconsole_path}" quit --index {instance_index}')
 
 
+def get_offline_devices():
+    result = subprocess.run(['adb', 'devices'], capture_output=True, text=True)
+    lines = result.stdout.strip().split('\n')
+    offline_devices = []
+    for line in lines[1:]:
+        if 'offline' in line:
+            device_id = line.split()[0]
+            offline_devices.append(device_id)
+    return offline_devices
+
+
+def terminate_emulator(emulator):
+    subprocess.run(["adb", "-s", emulator, "emu", "kill"],
+                   capture_output=True, text=True)
+
+
+def terminate_all_offline_emulators():
+    emulators = get_offline_devices()
+    if emulators:
+        for emulator in emulators:
+            print(f"Terminating {emulator}...")
+            terminate_emulator(emulator)
+
+
 def list_adb_devices(adb_port):
     result = subprocess.run(f'adb devices', stdout=subprocess.PIPE, shell=True)
     devices = result.stdout.decode().splitlines()
@@ -419,6 +443,8 @@ def play_latest_rank_season(d: webdriver.Remote):
         if time.time() - s > 30:
             raise Exception(
                 "couldn't find ranked season matchmaking (maybe net problem)")
+    
+    close_previous_games(d)
     found_matchmaking_buttons: list[tuple[WebElement, str]] = []
     s = time.time()
     flag = True
@@ -479,13 +505,28 @@ def play_latest_rank_season(d: webdriver.Remote):
     sleep(1)
 
 
+def close_previous_games(d: webdriver.Remote):
+    WebDriverWait(d, 5).until(EC.visibility_of_element_located(
+        (By.XPATH, '//android.widget.TextView[@resource-id="com.plato.android:id/enterable_item_call_to_action_text_view" and @text="PLAY"]')))
+    while 1:
+        try:
+            d.find_element(By.XPATH, '//android.widget.TextView[@resource-id="com.plato.android:id/enterable_item_call_to_action_text_view" and @text="PLAY"]').click()
+            WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
+                                                                            'plato_container_game_spinner')))
+            d.back()
+            sleep(1)
+        except:
+            break
+        sleep(0.5)
+
+
 def tap_using_percent(d: webdriver.Remote, x_percent: float, y_percent: float):
     window_size = d.get_window_size()
     screen_width = window_size['width']
     screen_height = window_size['height']
     x = int(screen_width * x_percent)
     y = int(screen_height * y_percent)
-    d.tap([(x, y)], 100)
+    d.tap([(x, y)], 10)
     # actions = ActionBuilder(d)
     # finger = actions.add_pointer_input("touch", "finger")
     # finger.add_action(finger.create_pointer_move(duration=0, x=x, y=y))
@@ -610,23 +651,32 @@ def launch_instance(instance: dict):
     instance_index = instance["index"]
     instance_name = instance["name"]
     instance_adb_port = instance["adb_port"]
-    with launch_instance_appium_server_lock:
-        while 1:
-            try:
-                logging.info(f"Launching LDPlayer instance: {instance_name}")
-                launch_ldplayer_instance_by_index(
-                    instance_index, instance_adb_port)
-                device_id = wait_for_new_LDPlayer_instance_to_appear_as_a_device(
-                    instance_adb_port)
-                wait_for_device_ready(device_id, instance_adb_port)
-                return device_id
-            except Exception as e:
-                logging.error(
-                    f"failed to launch LDPlayer instance: {instance_name} --------------")
+    while 1:
+        retry = 4
+        with launch_instance_appium_server_lock:
+            while retry > 0:
                 try:
-                    quit_ldplayer_instance_by_index(instance_index)
-                except:
-                    pass
+                    logging.info(
+                        f"Launching LDPlayer instance: {instance_name}")
+                    launch_ldplayer_instance_by_index(
+                        instance_index, instance_adb_port)
+                    device_id = wait_for_new_LDPlayer_instance_to_appear_as_a_device(
+                        instance_adb_port)
+                    wait_for_device_ready(device_id, instance_adb_port)
+                    return device_id
+                except Exception as e:
+                    retry -= 1
+                    logging.error(
+                        f"failed to launch LDPlayer instance: {instance_name} --------------")
+                    try:
+                        quit_ldplayer_instance_by_index(instance_index)
+                    except:
+                        pass
+                    terminate_all_offline_emulators()
+        if retry > 0:
+            break
+        else:
+            sleep(10)
 
 
 def run_instance(instance: dict):
