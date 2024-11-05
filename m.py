@@ -443,8 +443,10 @@ def play_latest_rank_season(d: webdriver.Remote):
         if time.time() - s > 30:
             raise Exception(
                 "couldn't find ranked season matchmaking (maybe net problem)")
-    
-    close_previous_games(d)
+    try:
+        close_previous_games(d)
+    except:
+        pass
     found_matchmaking_buttons: list[tuple[WebElement, str]] = []
     s = time.time()
     flag = True
@@ -527,12 +529,6 @@ def tap_using_percent(d: webdriver.Remote, x_percent: float, y_percent: float):
     x = int(screen_width * x_percent)
     y = int(screen_height * y_percent)
     d.tap([(x, y)], 10)
-    # actions = ActionBuilder(d)
-    # finger = actions.add_pointer_input("touch", "finger")
-    # finger.add_action(finger.create_pointer_move(duration=0, x=x, y=y))
-    # finger.add_action(finger.create_pointer_down(button=0))
-    # finger.add_action(finger.create_pointer_up(button=0))
-    # actions.perform()
 
 
 def resign_from_game(d:  webdriver.Remote):
