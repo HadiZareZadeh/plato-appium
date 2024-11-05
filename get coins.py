@@ -666,6 +666,10 @@ def chunk_list(input_list, chunk_size=4):
 
 
 def main():
+    filename: str = "coin_balance.xlsx"
+    if os.path.exists(filename):
+        os.remove(filename)
+
     all_instances = list_ldplayer_instances()
     max_workers = config['total_launched_instances']
     start_consumer_thread()
