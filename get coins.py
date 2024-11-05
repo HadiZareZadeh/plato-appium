@@ -10,6 +10,9 @@ import json
 import requests
 import pandas as pd
 from appium import webdriver
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+from openpyxl.utils import get_column_letter
 from selenium.webdriver.common.actions.pointer_input import PointerInput
 from selenium.webdriver.common.actions.action_builder import ActionBuilder
 from selenium.webdriver.common.actions import interaction
@@ -81,11 +84,33 @@ def save_to_queue(instance_name: str, package_name: str, balance: str):
     coin_data_queue.put((instance_name, package_name, balance))
 
 
+def get_fill_color(balance: float) -> PatternFill:
+    if balance >= 10000:
+        return PatternFill(start_color="0029FF52", end_color="0029FF52", fill_type="solid")
+    elif balance <= 0:
+        return PatternFill(start_color="00FF6629", end_color="00FF6629", fill_type="solid")
+    else:
+        start_r, start_g, start_b = 0xFF, 0x66, 0x29
+        end_r, end_g, end_b = 0x29, 0xFF, 0x52
+        try:
+            ratio = balance / 10000
+            b = int(ratio)
+        except:
+            ratio = 0
+        r = int(start_r + (end_r - start_r) * ratio)
+        g = int(start_g + (end_g - start_g) * ratio)
+        b = int(start_b + (end_b - start_b) * ratio)
+        color_hex = f"00{r:02X}{g:02X}{b:02X}"
+        return PatternFill(start_color=color_hex, end_color=color_hex, fill_type="solid")
+
+
 def save_coin_balance(instance_name: str, package_name: str, balance: str, filename: str = "coin_balance.xlsx"):
     package_column = f"{instance_name} - Package Name"
     balance_column = f"{instance_name} - Balance"
     updated_at_column = f"{instance_name} - Updated At"
+    summary_column = "Summary"
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
     with coin_file_lock:
         if os.path.exists(filename):
             df = pd.read_excel(filename)
@@ -106,6 +131,62 @@ def save_coin_balance(instance_name: str, package_name: str, balance: str, filen
                   balance_column] = convert_to_float(balance)
             df.at[num_entries_in_instance, updated_at_column] = current_time
         df.to_excel(filename, index=False)
+
+        wb = load_workbook(filename)
+        ws = wb.active
+
+        for col_name in df.columns:
+            if "Balance".lower() in col_name.lower():
+                col_idx = df.columns.get_loc(col_name) + 1
+                col_letter = get_column_letter(col_idx)
+                for row in range(2, len(df) + 2):
+                    balance_value = df.at[row - 2, col_name]
+                    fill = get_fill_color(balance_value)
+                    ws[f"{col_letter}{row}"].fill = fill
+
+        # Check if "Summary" column already exists
+        summary_col_idx = None
+        for col in ws.iter_cols(min_row=1, max_row=1):
+            if col[0].value == summary_column:
+                summary_col_idx = col[0].column
+                break
+
+        # If "Summary" column doesn't exist, add it as a new column
+        if summary_col_idx is None:
+            summary_col_idx = len(ws[1]) + 1
+            ws.cell(row=1, column=summary_col_idx, value=summary_column)
+
+        summary_col_letter = get_column_letter(summary_col_idx)
+
+        # Clear existing summary data if present
+        for row in ws.iter_rows(min_row=2, min_col=summary_col_idx, max_col=summary_col_idx):
+            row[0].value = None
+
+        # 1. Total balances of all instances
+        total_balance = df[[col for col in df.columns if "Balance" in col]].sum().sum()
+        ws[f"{summary_col_letter}2"] = f"All: {total_balance}"
+
+        # 2. Total balances for each instance
+        row_offset = 3
+        for col_name in df.columns:
+            if "Balance" in col_name:
+                instance_total = df[col_name].sum()
+                ws[f"{summary_col_letter}{row_offset}"] = f"{col_name.split(' - ')[0]} - {instance_total}"
+                row_offset += 1
+
+        # 3. Count balances by range
+        for lower in range(0, 10001, 500):
+            upper = lower + 499 if lower < 10000 else float('inf')
+            count = sum(
+                (df[col] > lower) & (df[col] <= upper)
+                for col in df.columns if "Balance" in col
+            ).sum()
+            range_text = f"{lower} and {upper}: {count}" if upper != float('inf') else f"Above 10000: {count}"
+            ws[f"{summary_col_letter}{row_offset}"] = range_text
+            row_offset += 1
+
+        wb.save(filename)
+
 
 
 def start_consumer_thread():
