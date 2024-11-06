@@ -475,13 +475,19 @@ def create_game_with_friend(d: webdriver.Remote, friend_name: str):
         (By.ID, 'play_with_friend_label'))).click()
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'friend_name_text_view')))
-    for el in d.find_elements(By.ID, 'friend_name_text_view'):
-        if el.text.strip().lower() == friend_name.lower():
-            el.click()
+    s = time.time()
+    while 1:
+        f = False
+        for el in d.find_elements(By.ID, 'friend_name_text_view'):
+            if el.text.strip().lower() == friend_name.lower():
+                el.click()
+                f = True
+                break
+        if f:
             break
-    else:
-        raise Exception(
-            "couldn't find ranked season matchmaking (maybe net problem)")
+        if time.time() - s > 30:
+            raise Exception(
+                "couldn't find ranked season matchmaking (maybe net problem)")
 
     xpath = "//android.widget.LinearLayout//android.widget.LinearLayout//android.widget.TextView[@text='2']"
     try:

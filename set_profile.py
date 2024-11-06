@@ -553,7 +553,7 @@ def set_profile(d: webdriver.Remote):
         (By.ID, 'crop_image_menu_crop'))).click()
     sleep(3)
     WebDriverWait(d, 20).until(EC.invisibility_of_element_located(
-        (By.XPATH, '//android.widget.ProgressBar[@resource-id="com.plato.android:id/profile_picture_change_progress"]')))
+        (By.ID, 'profile_picture_change_progress')))
     sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'bio_bubble_text_view'))).click()
