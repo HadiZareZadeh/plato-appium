@@ -242,8 +242,9 @@ def launch_ldplayer_instance_by_name(instance_name, adb_port):
 
 
 def launch_ldplayer_instance_by_index(instance_index, adb_port):
+    h = "--headless --mute" if config['headless'] != 0 else ''
     subprocess.Popen(
-        f'"{ldconsole_path}" launch --index {instance_index} --adb-port {adb_port}')
+        f'"{ldconsole_path}" launch --index {instance_index} --adb-port {adb_port} {h}')
 
 
 def quit_ldplayer_instance_by_name(instance_name):
