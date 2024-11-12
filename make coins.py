@@ -797,7 +797,6 @@ def run_instance(instance: dict):
     run_appium_server(instance_appium_port)
     installed_platos = list_installed_plato(device_id, instance_adb_port)
     for package_name in installed_platos:
-        package_name = 'com.plato.androlr'
         if is_processed_app_logged(instance_index, package_name):
             continue
         retry = 3

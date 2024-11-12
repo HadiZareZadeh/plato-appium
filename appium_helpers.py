@@ -44,9 +44,25 @@ logging.basicConfig(
 ldconsole_path = 'ldconsole.exe'
 config_path = 'config.json'
 
-with open(config_path) as f:
-    config = json.load(f)
-config['instances_index'] = config['instances_index'].split(',')
+config: dict = {}
+config_lock = threading.Lock()
+
+
+def init_config():
+    global config
+    with config_lock:
+        with open(config_path) as f:
+            config = json.load(f)
+
+
+def save_config():
+    global config
+    with config_lock:
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=4)
+
+
+init_config()
 
 
 def convert_to_float(s: str):
@@ -219,7 +235,7 @@ def list_ldplayer_instances():
     instance_names = []
     for line in instances:
         line = line.split(',')
-        if line[0] not in config['instances_index']:
+        if line[0] not in config['instances_index'].split(','):
             appium_port += 1
             system_port += 1
             adb_port += 1
@@ -592,24 +608,17 @@ def play_latest_rank_season(d: webdriver.Remote):
 
 def close_previous_games(d: webdriver.Remote):
     WebDriverWait(d, 5).until(EC.visibility_of_element_located(
-        (By.XPATH, '//android.widget.TextView[@text="PLAY"] | //android.widget.TextView[@text="Searching…"]')))
+        (By.XPATH, '//android.widget.TextView[@text="PLAY"]')))
     while 1:
         try:
             d.find_element(
-                By.XPATH, '//android.widget.TextView[@text="Searching…"]').click()
-            WebDriverWait(d, 2).until(EC.visibility_of_element_located(
-                (By.XPATH, '//android.widget.Button[@text="REMOVE"]'))).click()
+                By.XPATH, '//android.widget.TextView[@text="PLAY"]').click()
+            WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
+                                                                            'plato_container_game_spinner')))
+            d.back()
             sleep(1)
         except:
-            try:
-                d.find_element(
-                    By.XPATH, '//android.widget.TextView[@text="PLAY"]').click()
-                WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
-                                                                                'plato_container_game_spinner')))
-                d.back()
-                sleep(1)
-            except:
-                break
+            break
         sleep(0.5)
 
 
@@ -660,6 +669,89 @@ def go_to_shop_tab(d: webdriver.Remote):
 def go_to_home_tab(d: webdriver.Remote):
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'plato_tab_home'))).click()
+
+
+def go_to_friend_tab(d: webdriver.Remote):
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'plato_image_people'))).click()
+
+
+def add_friend(d: webdriver.Remote):
+    go_to_friend_tab(d)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'friend_name_text_view')))
+    for el in d.find_elements(By.ID, 'friend_name_text_view'):
+        if el.text.strip().lower() == '@PlatoViP'.lower():
+            el.click()
+            break
+    else:
+        raise Exception("couldn't find the plato vip chat")
+    init_config()
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'plato_conversation_chat_box'))).send_keys(config['friend_link'])
+    WebDriverWait(d, 5).until(EC.visibility_of_element_located(
+        (By.ID, 'plato_button_send'))).click()
+    sleep(5)
+    friend_name = d.find_elements(
+        By.ID, 'message_deep_link_title')[-1].text.strip()
+    d.find_elements(By.ID, 'message_deep_link_subtitle')[-1].click()
+    try:
+        WebDriverWait(d, 5).until(EC.visibility_of_element_located(
+            (By.ID, 'action_button_accept'))).click()
+    except:
+        pass
+    sleep(2)
+    d.back()
+    return friend_name
+
+
+def create_game_with_friend(d: webdriver.Remote, friend_name: str):
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'play_with_friend_label'))).click()
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'friend_name_text_view')))
+    s = time.time()
+    while 1:
+        f = False
+        for el in d.find_elements(By.ID, 'friend_name_text_view'):
+            if el.text.strip().lower() == friend_name.lower():
+                el.click()
+                f = True
+                break
+        if f:
+            break
+        if time.time() - s > 30:
+            raise Exception(
+                "couldn't find ranked season matchmaking (maybe net problem)")
+
+    xpath = "//android.widget.LinearLayout//android.widget.LinearLayout//android.widget.TextView[@text='2']"
+    try:
+        d.find_element(By.XPATH, xpath).click()
+        sleep(1)
+    except Exception as e:
+        pass
+
+    if 'chess' in config['win_fake_game']:
+        xpath = "//android.widget.LinearLayout//android.widget.LinearLayout//android.widget.TextView[@text='WHITE']"
+        try:
+            d.find_element(By.XPATH, xpath).click()
+            sleep(1)
+        except Exception as e:
+            pass
+        xpath = "//android.widget.LinearLayout//android.widget.LinearLayout//android.widget.TextView[@text='1M + 0S']"
+        try:
+            d.find_element(By.XPATH, xpath).click()
+            sleep(1)
+        except Exception as e:
+            pass
+
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'button_play_view'))).click()
+
+    sleep(3)
+    WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
+                                                                     'plato_container_game_spinner')))
+    sleep(1)
 
 
 def run_appium_server(appium_server_port):
@@ -799,7 +891,7 @@ def run_instance(instance: dict):
     for package_name in installed_platos:
         if is_processed_app_logged(instance_index, package_name):
             continue
-        retry = 3
+        retry = 5
         while 1:
             try:
                 logging.info(
@@ -831,25 +923,20 @@ def run_instance(instance: dict):
                 d.terminate_app(package_name)
                 d.quit()
                 break
+            except KeyboardInterrupt as e:
+                safe_quit()
+                raise e
             except Exception as e:
+                if retry <= 0:
+                    safe_quit()
+                    return instance_index
                 retry -= 1
                 logging.error(
                     f"failed to launch app on instance {instance_name} for {package_name} --------------")
-                try:
-                    d.terminate_app(package_name)
-                    d.quit()
-                except:
-                    pass
-                if retry <= 0:
-                    break
-
-                # if retry <= 0:
-                #     safe_quit()
-                #     return instance_index
-                # safe_quit()
-                # sleep(2)
-                # device_id = launch_instance(instance)
-                # run_appium_server(instance_appium_port)
+                safe_quit()
+                sleep(2)
+                device_id = launch_instance(instance)
+                run_appium_server(instance_appium_port)
     safe_quit()
     return instance_index
 
