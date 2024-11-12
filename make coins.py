@@ -168,7 +168,8 @@ def save_coin_balance(instance_name: str, package_name: str, balance: str, filen
             row[0].value = None
 
         # 1. Total balances of all instances
-        total_balance = df[[col for col in df.columns if "Balance" in col]].sum().sum()
+        total_balance = df[[
+            col for col in df.columns if "Balance" in col]].sum().sum()
         ws[f"{summary_col_letter}2"] = f"All: {total_balance}"
 
         # 2. Total balances for each instance
@@ -186,7 +187,8 @@ def save_coin_balance(instance_name: str, package_name: str, balance: str, filen
                 (df[col] > lower) & (df[col] <= upper)
                 for col in df.columns if "Balance" in col
             ).sum()
-            range_text = f"{lower} and {upper}: {count}" if upper != float('inf') else f"Above 10000: {count}"
+            range_text = f"{lower} and {upper}: {count}" if upper != float(
+                'inf') else f"Above 10000: {count}"
             ws[f"{summary_col_letter}{row_offset}"] = range_text
             row_offset += 1
 
@@ -242,7 +244,7 @@ def launch_ldplayer_instance_by_name(instance_name, adb_port):
 
 
 def launch_ldplayer_instance_by_index(instance_index, adb_port):
-    h = "--minimize --mute" if config['headless'] != 0 else ''
+    h = "--headless --mute" if config['headless'] != 0 else ''
     subprocess.Popen(
         f'"{ldconsole_path}" launch --index {instance_index} --adb-port {adb_port} {h}')
 
@@ -424,7 +426,8 @@ def is_game_in_favorite(d: webdriver.Remote, game_name: str):
             return False
         for title_element in recycler.find_elements(By.ID, 'title_text_view'):
             if game_name.lower() == title_element.text.lower().strip():
-                x = title_element.location_in_view['x'] + title_element.size['width']//2
+                x = title_element.location_in_view['x'] + \
+                    title_element.size['width']//2
                 y = title_element.location_in_view['y'] - 50
                 d.tap([(x, y)])
                 flag = True
@@ -438,7 +441,7 @@ def is_game_in_favorite(d: webdriver.Remote, game_name: str):
             x2 = int(size['width'] * 0.35)
             y2 = int(size['height'] * 0.25)
             d.swipe(x1, y1, x2, y2, 150)
-        
+
 
 def select_game(d: webdriver.Remote, game_name: str):
     if is_game_in_favorite(d, game_name):
@@ -589,16 +592,24 @@ def play_latest_rank_season(d: webdriver.Remote):
 
 def close_previous_games(d: webdriver.Remote):
     WebDriverWait(d, 5).until(EC.visibility_of_element_located(
-        (By.XPATH, '//android.widget.TextView[@text="PLAY"]')))
+        (By.XPATH, '//android.widget.TextView[@text="PLAY"] | //android.widget.TextView[@text="Searching…"]')))
     while 1:
         try:
-            d.find_element(By.XPATH, '//android.widget.TextView[@text="PLAY"]').click()
-            WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
-                                                                            'plato_container_game_spinner')))
-            d.back()
+            d.find_element(
+                By.XPATH, '//android.widget.TextView[@text="Searching…"]').click()
+            WebDriverWait(d, 2).until(EC.visibility_of_element_located(
+                (By.XPATH, '//android.widget.Button[@text="REMOVE"]'))).click()
             sleep(1)
         except:
-            break
+            try:
+                d.find_element(
+                    By.XPATH, '//android.widget.TextView[@text="PLAY"]').click()
+                WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
+                                                                                'plato_container_game_spinner')))
+                d.back()
+                sleep(1)
+            except:
+                break
         sleep(0.5)
 
 
@@ -786,9 +797,10 @@ def run_instance(instance: dict):
     run_appium_server(instance_appium_port)
     installed_platos = list_installed_plato(device_id, instance_adb_port)
     for package_name in installed_platos:
+        package_name = 'com.plato.androlr'
         if is_processed_app_logged(instance_index, package_name):
             continue
-        retry = 5
+        retry = 3
         while 1:
             try:
                 logging.info(
@@ -802,7 +814,7 @@ def run_instance(instance: dict):
                 if not is_rank_game_played(d):
                     select_game(d, 'Cribbage')
                     play_latest_rank_season(d)
-                    sleep(3)
+                    sleep(5)
                     if is_game_closed(d):
                         d.back()
                     else:
@@ -820,20 +832,25 @@ def run_instance(instance: dict):
                 d.terminate_app(package_name)
                 d.quit()
                 break
-            except KeyboardInterrupt as e:
-                safe_quit()
-                raise e
             except Exception as e:
-                if retry <= 0:
-                    safe_quit()
-                    return instance_index
                 retry -= 1
                 logging.error(
                     f"failed to launch app on instance {instance_name} for {package_name} --------------")
-                safe_quit()
-                sleep(2)
-                device_id = launch_instance(instance)
-                run_appium_server(instance_appium_port)
+                try:
+                    d.terminate_app(package_name)
+                    d.quit()
+                except:
+                    pass
+                if retry <= 0:
+                    break
+
+                # if retry <= 0:
+                #     safe_quit()
+                #     return instance_index
+                # safe_quit()
+                # sleep(2)
+                # device_id = launch_instance(instance)
+                # run_appium_server(instance_appium_port)
     safe_quit()
     return instance_index
 
