@@ -817,6 +817,7 @@ def main():
     coin_data_queue.join()
     stop_consumer_thread()
 
+
 if __name__ == "__main__":
     try:
         main()
