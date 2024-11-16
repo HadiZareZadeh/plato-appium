@@ -43,7 +43,7 @@ logging.basicConfig(
 
 ldconsole_path = 'ldconsole.exe'
 config_path = 'config.json'
-
+config_win_fake_path = 'config-win-fake.json'
 config: dict = {}
 config_lock = threading.Lock()
 
@@ -235,11 +235,12 @@ def list_ldplayer_instances():
     instance_names = []
     for line in instances:
         line = line.split(',')
-        if line[0] not in config['instances_index'].split(','):
-            appium_port += 1
-            system_port += 1
-            adb_port += 1
-            continue
+        if 'instances_index' in config:
+            if line[0] not in config['instances_index'].split(','):
+                appium_port += 1
+                system_port += 1
+                adb_port += 1
+                continue
         instance_names.append({
             "index": line[0],
             "name": line[1],
@@ -575,7 +576,7 @@ def play_latest_rank_season(d: webdriver.Remote):
                     pass
             if not found_new:
                 break
-            for _ in range(4):
+            for _ in range(5):
                 d.press_keycode(20)
         if len(found_matchmaking_buttons) > 0:
             found_matchmaking_buttons[-1][0].click()
@@ -608,17 +609,24 @@ def play_latest_rank_season(d: webdriver.Remote):
 
 def close_previous_games(d: webdriver.Remote):
     WebDriverWait(d, 5).until(EC.visibility_of_element_located(
-        (By.XPATH, '//android.widget.TextView[@text="PLAY"]')))
+        (By.XPATH, '//android.widget.TextView[@text="PLAY"] | //android.widget.TextView[@text="Searching…"]')))
     while 1:
         try:
             d.find_element(
-                By.XPATH, '//android.widget.TextView[@text="PLAY"]').click()
-            WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
-                                                                            'plato_container_game_spinner')))
-            d.back()
+                By.XPATH, '//android.widget.TextView[@text="Searching…"]').click()
+            WebDriverWait(d, 2).until(EC.visibility_of_element_located(
+                (By.XPATH, '//android.widget.Button[@text="REMOVE"]'))).click()
             sleep(1)
         except:
-            break
+            try:
+                d.find_element(
+                    By.XPATH, '//android.widget.TextView[@text="PLAY"]').click()
+                WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
+                                                                                'plato_container_game_spinner')))
+                d.back()
+                sleep(1)
+            except:
+                break
         sleep(0.5)
 
 
@@ -752,6 +760,60 @@ def create_game_with_friend(d: webdriver.Remote, friend_name: str):
     WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
                                                                      'plato_container_game_spinner')))
     sleep(1)
+
+
+def set_profile(d: webdriver.Remote):
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'plato_image_framed_profile'))).click()
+    sleep(1)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'profile_picture_change_button'))).click()
+    sleep(1)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.XPATH, '//android.widget.TextView[@resource-id="android:id/text1" and @text="Choose Photo"]'))).click()
+    sleep(1)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.XPATH, '//android.widget.ImageButton[@content-desc="Show roots"]'))).click()
+    sleep(1)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.XPATH, '//android.widget.TextView[@resource-id="android:id/title" and @text="Images"]'))).click()
+    sleep(1)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.XPATH, '//android.support.v7.widget.RecyclerView[@resource-id="com.android.documentsui:id/dir_list"]/android.widget.LinearLayout'))).click()
+    sleep(1)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.XPATH, '//android.widget.FrameLayout[@resource-id="com.android.documentsui:id/thumbnail"]'))).click()
+    sleep(4)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'crop_image_menu_crop'))).click()
+    sleep(3)
+    WebDriverWait(d, 20).until(EC.invisibility_of_element_located(
+        (By.ID, 'profile_picture_change_progress')))
+    sleep(1)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'bio_bubble_text_view'))).click()
+    sleep(1)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'input_edit_text'))).clear()
+    sleep(1)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.ID, 'input_edit_text'))).send_keys("""رنک آپ_وین فیک_فروش آیتم شاپ_شارژ پیپ و سکه                                         Tel @platocat""")
+    sleep(1)
+    WebDriverWait(d, 10).until(EC.visibility_of_element_located(
+        (By.XPATH, '//android.widget.Button[@resource-id="android:id/button1"]'))).click()
+    sleep(5)
+
+
+# def has_player_joined(d: webdriver.Remote):
+#     screenshot = d.get_screenshot_as_png()
+#     image = Image.open(io.BytesIO(screenshot))
+#     width, height = image.size
+#     x1 = int(width * 0.8)
+#     y1 = int(height * 0.2)
+#     x2 = int(width * 1)
+#     y2 = int(height * 0.25)
+#     cropped_image = image.crop((x1, y1, x2, y2))
+#     text = pytesseract.image_to_string(cropped_image)
 
 
 def run_appium_server(appium_server_port):
@@ -891,7 +953,7 @@ def run_instance(instance: dict):
     for package_name in installed_platos:
         if is_processed_app_logged(instance_index, package_name):
             continue
-        retry = 5
+        retry = 3
         while 1:
             try:
                 logging.info(
@@ -923,20 +985,25 @@ def run_instance(instance: dict):
                 d.terminate_app(package_name)
                 d.quit()
                 break
-            except KeyboardInterrupt as e:
-                safe_quit()
-                raise e
             except Exception as e:
-                if retry <= 0:
-                    safe_quit()
-                    return instance_index
                 retry -= 1
                 logging.error(
                     f"failed to launch app on instance {instance_name} for {package_name} --------------")
-                safe_quit()
-                sleep(2)
-                device_id = launch_instance(instance)
-                run_appium_server(instance_appium_port)
+                try:
+                    d.terminate_app(package_name)
+                    d.quit()
+                except:
+                    pass
+                if retry <= 0:
+                    break
+
+                # if retry <= 0:
+                #     safe_quit()
+                #     return instance_index
+                # safe_quit()
+                # sleep(2)
+                # device_id = launch_instance(instance)
+                # run_appium_server(instance_appium_port)
     safe_quit()
     return instance_index
 

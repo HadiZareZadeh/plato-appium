@@ -44,9 +44,25 @@ logging.basicConfig(
 ldconsole_path = 'ldconsole.exe'
 config_path = 'config.json'
 
-with open(config_path) as f:
-    config = json.load(f)
-config['instances_index'] = config['instances_index'].split(',')
+config: dict = {}
+config_lock = threading.Lock()
+
+
+def init_config():
+    global config
+    with config_lock:
+        with open(config_path) as f:
+            config = json.load(f)
+
+
+def save_config():
+    global config
+    with config_lock:
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=4)
+
+
+init_config()
 
 
 def convert_to_float(s: str):
@@ -219,7 +235,7 @@ def list_ldplayer_instances():
     instance_names = []
     for line in instances:
         line = line.split(',')
-        if line[0] not in config['instances_index']:
+        if line[0] not in config['instances_index'].split(','):
             appium_port += 1
             system_port += 1
             adb_port += 1
