@@ -448,7 +448,7 @@ def add_friend(d: webdriver.Remote):
     go_to_friend_tab(d)
     while 1:
         try:
-            WebDriverWait(d, 20).until(EC.visibility_of_element_located(
+            WebDriverWait(d, 35).until(EC.visibility_of_element_located(
                 (By.ID, 'friend_name_text_view')))
             for el in d.find_elements(By.ID, 'friend_name_text_view'):
                 if el.text.strip().lower() == '@PlatoViP'.lower():
@@ -459,9 +459,9 @@ def add_friend(d: webdriver.Remote):
             break
         except:
             go_to_home_tab(d)
-            sleep(.5)
-            go_to_friend_tab(d)
             sleep(1)
+            go_to_friend_tab(d)
+            sleep(2)
     init_config()
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'plato_conversation_chat_box'))).send_keys(config['friend_link'])

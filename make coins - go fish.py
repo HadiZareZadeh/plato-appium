@@ -548,13 +548,13 @@ def play_latest_rank_season(d: webdriver.Remote):
         pass
     found_matchmaking_buttons: list[tuple[WebElement, str]] = []
     s = time.time()
-    flag = True
-    while flag:
+    flag = False
+    while not flag:
         for matchmaking_title in d.find_elements(By.ID, "enterable_item_title"):
             try:
                 txt = matchmaking_title.text
-                if 'rank' not in txt.lower():
-                    flag = False
+                if 'rank' in txt.lower():
+                    flag = True
             except Exception as e:
                 pass
         if time.time() - s > 30:
@@ -567,7 +567,7 @@ def play_latest_rank_season(d: webdriver.Remote):
             for matchmaking_title in d.find_elements(By.ID, "enterable_item_title"):
                 try:
                     txt = matchmaking_title.text
-                    if txt not in [x[1] for x in found_matchmaking_buttons]:
+                    if 'rank' in txt.lower() and txt not in [x[1] for x in found_matchmaking_buttons]:
                         found_matchmaking_buttons.append(
                             (matchmaking_title, txt))
                         found_new = True
