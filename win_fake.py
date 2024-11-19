@@ -456,7 +456,9 @@ def add_friend(d: webdriver.Remote):
                     el.click()
                     break
             else:
-                raise Exception("couldn't find the plato vip chat")
+                retry -= 1
+                if retry <= 0:
+                    raise Exception("couldn't find the plato vip chat")
             break
         except:
             go_to_home_tab(d)
