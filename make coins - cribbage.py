@@ -645,13 +645,22 @@ def resign_from_game(d:  webdriver.Remote):
         (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Resign")'))).click()
     sleep(1)
     size = d.get_window_size()
-    if size['width'] > size['height']:
-        tap_using_percent(d, 0.6, 0.79)
+    if 'match monsters' == config['win_fake_game'].lower():
+        if size['width'] > size['height']:
+            tap_using_percent(d, 0.4, 0.79)
+        else:
+            tap_using_percent(d, 0.25, 0.40)
+            tap_using_percent(d, 0.25, 0.45)
+            tap_using_percent(d, 0.25, 0.485)
+            tap_using_percent(d, 0.25, 0.52)
     else:
-        tap_using_percent(d, 0.75, 0.60)
-        tap_using_percent(d, 0.75, 0.65)
-        tap_using_percent(d, 0.75, 0.685)
-        tap_using_percent(d, 0.75, 0.72)
+        if size['width'] > size['height']:
+            tap_using_percent(d, 0.6, 0.79)
+        else:
+            tap_using_percent(d, 0.75, 0.60)
+            tap_using_percent(d, 0.75, 0.65)
+            tap_using_percent(d, 0.75, 0.685)
+            tap_using_percent(d, 0.75, 0.72)
     sleep(0.7)
     d.back()
 
