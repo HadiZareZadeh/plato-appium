@@ -446,6 +446,7 @@ def go_to_friend_tab(d: webdriver.Remote):
 
 def add_friend(d: webdriver.Remote):
     go_to_friend_tab(d)
+    retry = 3
     while 1:
         try:
             WebDriverWait(d, 35).until(EC.visibility_of_element_located(
@@ -459,9 +460,9 @@ def add_friend(d: webdriver.Remote):
             break
         except:
             go_to_home_tab(d)
-            sleep(1)
+            sleep(.5)
             go_to_friend_tab(d)
-            sleep(2)
+            sleep(.5)
     init_config()
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'plato_conversation_chat_box'))).send_keys(config['friend_link'])
@@ -715,21 +716,25 @@ def run_instance(instance: dict):
                     d.back()
                 d.quit()
                 break
-            except KeyboardInterrupt as e:
-                safe_quit()
-                raise e
             except Exception as e:
-                if retry <= 0:
-                    safe_quit()
-                    return instance_index
                 retry -= 1
                 logging.error(
                     f"failed to launch app on instance {instance_name} for {package_name} --------------")
-                safe_quit()
-                sleep(2)
-                device_id = launch_instance(instance)
-                run_appium_server(instance_appium_port)
+                try:
+                    d.terminate_app(package_name)
+                    d.quit()
+                except:
+                    pass
+                if retry <= 0:
+                    break
 
+                # if retry <= 0:
+                #     safe_quit()
+                #     return instance_index
+                # safe_quit()
+                # sleep(2)
+                # device_id = launch_instance(instance)
+                # run_appium_server(instance_appium_port)
     safe_quit()
     return instance_index
 
