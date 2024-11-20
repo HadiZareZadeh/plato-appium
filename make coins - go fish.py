@@ -756,7 +756,7 @@ def click_lets_go(d: webdriver.Remote):
             (By.ID, 'start_screen_button_label'))).click()
     except:
         pass
-    WebDriverWait(d, 15).until(EC.visibility_of_element_located(
+    WebDriverWait(d, 20).until(EC.visibility_of_element_located(
         (By.ID, 'plato_tab_home')))
 
 
