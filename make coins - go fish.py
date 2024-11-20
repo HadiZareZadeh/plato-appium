@@ -542,10 +542,7 @@ def play_latest_rank_season(d: webdriver.Remote):
         if time.time() - s > 30:
             raise Exception(
                 "couldn't find ranked season matchmaking (maybe net problem)")
-    try:
-        close_previous_games(d)
-    except:
-        pass
+    close_previous_games(d)
     found_matchmaking_buttons: list[tuple[WebElement, str]] = []
     s = time.time()
     flag = False
@@ -607,9 +604,14 @@ def play_latest_rank_season(d: webdriver.Remote):
 
 
 def close_previous_games(d: webdriver.Remote):
-    WebDriverWait(d, 5).until(EC.visibility_of_element_located(
-        (By.XPATH, '//android.widget.TextView[@text="PLAY"] | //android.widget.TextView[@text="Searching…"]')))
+    try:
+        WebDriverWait(d, 5).until(EC.visibility_of_element_located(
+            (By.XPATH, '//android.widget.TextView[@text="PLAY"] | //android.widget.TextView[@text="Searching…"]')))
+    except:
+        return
+    retry = 5
     while 1:
+        retry -= 1
         try:
             d.find_element(
                 By.XPATH, '//android.widget.TextView[@text="Searching…"]').click()
@@ -623,6 +625,9 @@ def close_previous_games(d: webdriver.Remote):
                 WebDriverWait(d, 3*60).until(EC.invisibility_of_element_located((By.ID,
                                                                                 'plato_container_game_spinner')))
                 d.back()
+                if retry <= 0:
+                    raise Exception(
+                        "couldn't close previous games")
                 sleep(1)
             except:
                 break
@@ -646,13 +651,12 @@ def resign_from_game(d:  webdriver.Remote):
     sleep(1)
     size = d.get_window_size()
     if 'match monsters' == config['win_fake_game'].lower():
-        if size['width'] > size['height']:
-            tap_using_percent(d, 0.4, 0.79)
-        else:
-            tap_using_percent(d, 0.25, 0.40)
-            tap_using_percent(d, 0.25, 0.45)
-            tap_using_percent(d, 0.25, 0.485)
-            tap_using_percent(d, 0.25, 0.52)
+        tap_using_percent(d, 0.25, 0.40)
+        tap_using_percent(d, 0.25, 0.45)
+        tap_using_percent(d, 0.25, 0.485)
+        tap_using_percent(d, 0.25, 0.52)
+    elif 'dots & boxes' == config['win_fake_game'].lower():
+        tap_using_percent(d, 0.75, 0.6)
     else:
         if size['width'] > size['height']:
             tap_using_percent(d, 0.6, 0.79)
