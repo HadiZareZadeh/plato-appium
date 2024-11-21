@@ -803,6 +803,9 @@ def launch_instance(instance: dict):
             sleep(10)
 
 
+done_instances = []
+
+
 def run_instance(instance: dict):
     app_activity = 'com.playchat.ui.activity.MainActivity'
     instance_index = instance["index"]
@@ -829,6 +832,8 @@ def run_instance(instance: dict):
     import random
     random.shuffle(installed_platos)
 
+    instance_is_done = True
+
     for package_name in installed_platos:
         if is_processed_app_logged(instance_index, package_name):
             continue
@@ -844,6 +849,7 @@ def run_instance(instance: dict):
                 click_lets_go(d)
                 # check_for_backup_button(d)
                 if not is_rank_game_played(d):
+                    instance_is_done = False
                     select_game(d, 'Cribbage')
                     play_latest_rank_season(d)
                     sleep(5)
@@ -883,6 +889,8 @@ def run_instance(instance: dict):
                 # sleep(2)
                 # device_id = launch_instance(instance)
                 # run_appium_server(instance_appium_port)
+    if instance_is_done:
+        done_instances.append(instance_index)
     safe_quit()
     return instance
 
@@ -965,7 +973,8 @@ def main():
                 next_intance = all_instances.pop(0)
                 print(f"Resubmitting LDPlayer instance {next_intance}")
                 futures.remove(future)
-                futures.append(executor.submit(run_instance, next_intance))
+                if next_intance["index"] not in done_instances:
+                    futures.append(executor.submit(run_instance, next_intance))
     coin_data_queue.join()
     stop_consumer_thread()
 
