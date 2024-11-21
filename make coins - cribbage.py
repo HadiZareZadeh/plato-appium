@@ -825,6 +825,10 @@ def run_instance(instance: dict):
     logging.info(f"Starting Appium Server for instance: {instance_name}")
     run_appium_server(instance_appium_port)
     installed_platos = list_installed_plato(device_id, instance_adb_port)
+
+    import random
+    random.shuffle(installed_platos)
+
     for package_name in installed_platos:
         if is_processed_app_logged(instance_index, package_name):
             continue
@@ -863,7 +867,7 @@ def run_instance(instance: dict):
             except Exception as e:
                 retry -= 1
                 logging.error(
-                    f"failed to launch app on instance {instance_name} for {package_name} --------------")
+                    f"failed to launch app on instance {instance_name} for {package_name} -------------- {e}")
                 try:
                     d.terminate_app(package_name)
                     d.quit()
@@ -880,7 +884,7 @@ def run_instance(instance: dict):
                 # device_id = launch_instance(instance)
                 # run_appium_server(instance_appium_port)
     safe_quit()
-    return instance_index
+    return instance
 
 
 def chunk_list(input_list, chunk_size=4):
@@ -948,18 +952,17 @@ def reset_log_file():
 def main():
     initialize_log()
     all_instances = list_ldplayer_instances()
-    max_workers = config['total_launched_instances']
+    max_workers = min(config['total_launched_instances'], len(all_instances))
     start_consumer_thread()
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        instance_cycle = itertools.cycle(all_instances)
-        futures = [executor.submit(run_instance, next(
-            instance_cycle)) for _ in range(max_workers)]
+        futures = [executor.submit(run_instance, all_instances.pop(0)) for _ in range(max_workers)]
         while True:
             done, undone = concurrent.futures.wait(
                 futures, return_when=concurrent.futures.FIRST_COMPLETED)
             for future in done:
-                future.result()
-                next_intance = next(instance_cycle)
+                done_instance = future.result()
+                all_instances.append(done_instance)
+                next_intance = all_instances.pop(0)
                 print(f"Resubmitting LDPlayer instance {next_intance}")
                 futures.remove(future)
                 futures.append(executor.submit(run_instance, next_intance))
