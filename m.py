@@ -829,8 +829,6 @@ def run_instance(instance: dict):
     import random
     random.shuffle(installed_platos)
 
-    installed_platos = installed_platos[0:random.randint(1,5)]
-
     for package_name in installed_platos:
         if is_processed_app_logged(instance_index, package_name):
             continue
