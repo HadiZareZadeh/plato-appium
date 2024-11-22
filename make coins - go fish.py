@@ -913,6 +913,7 @@ def initialize_log():
         except (FileNotFoundError, json.JSONDecodeError):
             with open(get_file_done_path_for_instance(instance_index), "w") as file:
                 json.dump({}, file)
+    schedule.every().day.at("03:30").do(done_instances.clear)
     schedule.every().day.at("03:30").do(reset_log_file)
     th = threading.Thread(target=check_for_reset_log_file, daemon=True)
     th.start()
@@ -951,8 +952,11 @@ def reset_log_file():
 
 
 def main():
+    done_instances.clear()
     initialize_log()
-    all_instances = list_ldplayer_instances()
+    from copy import deepcopy
+    _all_instances = list_ldplayer_instances()
+    all_instances = deepcopy(_all_instances)
     max_workers = min(config['total_launched_instances'], len(all_instances))
     start_consumer_thread()
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -968,8 +972,14 @@ def main():
                 futures.remove(future)
                 if next_intance["index"] not in done_instances:
                     futures.append(executor.submit(run_instance, next_intance))
+            if len(futures) == 0:
+                while len(done_instances) == len(all_instances):
+                    sleep(1)
+                all_instances = deepcopy(_all_instances)
+                futures = [executor.submit(run_instance, all_instances.pop(0)) for _ in range(max_workers)]
     coin_data_queue.join()
     stop_consumer_thread()
+    done_instances.clear()
 
 
 if __name__ == "__main__":
