@@ -959,27 +959,27 @@ def main():
     all_instances = deepcopy(_all_instances)
     max_workers = min(config['total_launched_instances'], len(all_instances))
     start_consumer_thread()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(run_instance, all_instances.pop(0)) for _ in range(max_workers)]
-        while True:
-            done, undone = concurrent.futures.wait(
-                futures, return_when=concurrent.futures.FIRST_COMPLETED)
-            for future in done:
-                done_instance = future.result()
-                all_instances.append(done_instance)
-                next_intance = all_instances.pop(0)
-                print(f"Resubmitting LDPlayer instance {next_intance}")
-                futures.remove(future)
-                if next_intance["index"] not in done_instances:
-                    futures.append(executor.submit(run_instance, next_intance))
-            if len(futures) == 0:
-                while len(done_instances) == len(all_instances):
-                    sleep(1)
-                all_instances = deepcopy(_all_instances)
-                futures = [executor.submit(run_instance, all_instances.pop(0)) for _ in range(max_workers)]
-    coin_data_queue.join()
-    stop_consumer_thread()
-    done_instances.clear()
+    while True:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(run_instance, all_instances.pop(0)) for _ in range(max_workers)]
+            while True:
+                done, undone = concurrent.futures.wait(
+                    futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                for future in done:
+                    done_instance = future.result()
+                    all_instances.append(done_instance)
+                    next_intance = all_instances.pop(0)
+                    print(f"Resubmitting LDPlayer instance {next_intance}")
+                    futures.remove(future)
+                    if next_intance["index"] not in done_instances:
+                        futures.append(executor.submit(run_instance, next_intance))
+                if len(futures) == 0:
+                    while len(done_instances) == len(all_instances):
+                        sleep(1)
+                    all_instances = deepcopy(_all_instances)
+                    break
+    # coin_data_queue.join()
+    # stop_consumer_thread()
 
 
 if __name__ == "__main__":

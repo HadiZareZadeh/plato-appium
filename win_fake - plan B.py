@@ -621,7 +621,8 @@ def launch_instance(instance: dict):
         with launch_instance_appium_server_lock:
             while retry > 0:
                 try:
-                    logging.info(f"Launching LDPlayer instance: {instance_name}")
+                    logging.info(
+                        f"Launching LDPlayer instance: {instance_name}")
                     launch_ldplayer_instance_by_index(
                         instance_index, instance_adb_port)
                     device_id = wait_for_new_LDPlayer_instance_to_appear_as_a_device(
@@ -673,7 +674,7 @@ def run_instance(instance: dict):
                 logging.info(
                     f"Starting Appium session on the device on instance {instance_name} for {package_name} app")
                 d = start_appium_session(instance_appium_port, instance_system_port,
-                                        instance_adb_port, device_id, package_name, app_activity)
+                                         instance_adb_port, device_id, package_name, app_activity)
                 logging.info(f"launching app {package_name}")
                 d.activate_app(package_name)
                 friend_name = add_friend(d)
@@ -692,7 +693,8 @@ def run_instance(instance: dict):
             device_id = launch_instance(instance)
             run_appium_server(instance_appium_port)
 
-    logging.info(f"Launched apps on instance {instance_name} for {package_name} app")
+    logging.info(
+        f"Launched apps on instance {instance_name} for {package_name} app")
     installed_platos_cycle = itertools.cycle(installed_platos)
     while config['total_win_fake'] > 0:
         package_name = next(installed_platos_cycle)
@@ -702,7 +704,7 @@ def run_instance(instance: dict):
                 logging.info(
                     f"Starting Appium session on the device on instance {instance_name} for {package_name} app")
                 d = start_appium_session(instance_appium_port, instance_system_port,
-                        instance_adb_port, device_id, package_name, app_activity)
+                                         instance_adb_port, device_id, package_name, app_activity)
                 logging.info(f"launching app {package_name}")
                 d.activate_app(package_name)
                 sleep(.5)
@@ -734,7 +736,13 @@ def run_instance(instance: dict):
                     pass
                 if retry <= 0:
                     break
-
+                d = start_appium_session(instance_appium_port, instance_system_port,
+                                         instance_adb_port, device_id, package_name, app_activity)
+                logging.info(f"launching app {package_name}")
+                d.activate_app(package_name)
+                friend_name = add_friend(d)
+                select_game(d, config['win_fake_game'])
+                d.quit()
                 # if retry <= 0:
                 #     safe_quit()
                 #     return instance_index
