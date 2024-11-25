@@ -542,22 +542,22 @@ def set_profile(d: webdriver.Remote):
     sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.widget.TextView[@resource-id="android:id/title" and @text="Images"]'))).click()
-    sleep(1)
+    sleep(2)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.support.v7.widget.RecyclerView[@resource-id="com.android.documentsui:id/dir_list"]/android.widget.LinearLayout'))).click()
-    sleep(1)
+    sleep(2)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.widget.FrameLayout[@resource-id="com.android.documentsui:id/thumbnail"]'))).click()
-    sleep(4)
+    sleep(5)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'crop_image_menu_crop'))).click()
-    sleep(3)
+    sleep(5)
     WebDriverWait(d, 20).until(EC.invisibility_of_element_located(
         (By.ID, 'profile_picture_change_progress')))
-    sleep(1)
+    sleep(2)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'bio_bubble_text_view'))).click()
-    sleep(1)
+    sleep(2)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'input_edit_text'))).clear()
     sleep(1)

@@ -403,12 +403,17 @@ def resign_from_game(d:  webdriver.Remote):
         (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Resign")'))).click()
     sleep(1)
     size = d.get_window_size()
-    if 'match monsters' == config['win_fake_game'].lower():
+    if config['win_fake_game'].lower() in ['match monsters']:
         tap_using_percent(d, 0.25, 0.40)
         tap_using_percent(d, 0.25, 0.45)
         tap_using_percent(d, 0.25, 0.485)
         tap_using_percent(d, 0.25, 0.52)
-    elif 'dots & boxes' == config['win_fake_game'].lower():
+    elif config['win_fake_game'].lower() in ['ludo']:
+        tap_using_percent(d, 0.25, 0.53)
+        tap_using_percent(d, 0.25, 0.57)
+        tap_using_percent(d, 0.25, 0.6)
+        tap_using_percent(d, 0.25, 0.63)
+    elif config['win_fake_game'].lower() in ['dots & boxes']:
         tap_using_percent(d, 0.75, 0.6)
     else:
         if size['width'] > size['height']:

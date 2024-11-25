@@ -881,7 +881,6 @@ def run_instance(instance: dict):
                     pass
                 if retry <= 0:
                     break
-
                 # if retry <= 0:
                 #     safe_quit()
                 #     return instance_index
