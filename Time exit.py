@@ -5,20 +5,22 @@ import os
 import psutil
 
 # مسیر پوشه پروژه
-project_folder = r"C:\Users\farzad\Desktop\plato-appium"
+project_folder = r"C:\Users\moj\Desktop\appium"
 main_script = os.path.join(project_folder, "make coins - go fish.py")
 
 # فایل‌های دیگر که باید قبل از اجرای فایل اصلی اجرا شوند
 stop_scripts = [
-    os.path.join(project_folder, "stop emulator.py"),
+    os.path.join(project_folder, "stop msi.py"),
     os.path.join(project_folder, "stop instances.py"),
-    os.path.join(project_folder, "stop servers.py")
+    os.path.join(project_folder, "stop servers.py"),
+    os.path.join(project_folder, "stop emulator.py")
 ]
 
 pre_scripts = [
-    os.path.join(project_folder, "stop emulator.py"),
+    os.path.join(project_folder, "stop msi.py"),
     os.path.join(project_folder, "stop instances.py"),
-    os.path.join(project_folder, "stop servers.py")
+    os.path.join(project_folder, "stop servers.py"),
+    os.path.join(project_folder, "stop emulator.py")
 ]
 
 def kill_python_processes():
@@ -31,7 +33,7 @@ def kill_python_processes():
                 print(f"Terminated process: PID {proc.info['pid']}")
             except Exception as e:
                 print(f"Failed to terminate process: {proc.info['pid']} - {e}")
-    time.sleep(10)  # صبر 10 ثانیه‌ای بعد از بستن فرآیندها
+    time.sleep(5)  # صبر 10 ثانیه‌ای بعد از بستن فرآیندها
 
 def run_pre_scripts():
     """اجرای فایل‌های اولیه با تأخیر بین هر کدام."""
@@ -40,7 +42,7 @@ def run_pre_scripts():
             print(f"Running script: {script}")
             try:
                 subprocess.run(["python", script], check=True)
-                time.sleep(10)  # صبر 10 ثانیه بین هر اسکریپت
+                time.sleep(5)  # صبر 10 ثانیه بین هر اسکریپت
             except subprocess.CalledProcessError as e:
                 print(f"Error running script {script}: {e}")
         else:
@@ -69,4 +71,4 @@ print("Scheduled task is running. Waiting for the specified time. Press Ctrl+C t
 # حلقه اصلی برای اجرا و نظارت
 while True:
     schedule.run_pending()
-    time.sleep(1)
+    time.sleep(2)

@@ -356,7 +356,7 @@ def play_latest_rank_season(d: webdriver.Remote):
                     pass
             if not found_new:
                 break
-            for _ in range(5):
+            for _ in range(4):
                 d.press_keycode(20)
         if len(found_matchmaking_buttons) > 0:
             found_matchmaking_buttons[-1][0].click()
