@@ -671,9 +671,12 @@ def run_instance(instance: dict):
     installed_platos = list_installed_plato(device_id, instance_adb_port)
     installed_platos = installed_platos[:config['number_of_apps_for_win_fake']]
     friend_name = ''
+    last_launched_times = {package_name:0 for package_name in installed_platos}
     installed_platos_cycle = itertools.cycle(installed_platos)
     while config['total_win_fake'] > 0:
         package_name = next(installed_platos_cycle)
+        if last_launched_times + 60 > time.time():
+            continue
         retry = 5
         while 1:
             try:
@@ -722,6 +725,8 @@ def run_instance(instance: dict):
                 # sleep(2)
                 # device_id = launch_instance(instance)
                 # run_appium_server(instance_appium_port)
+        last_launched_times[package_name] = time.time()
+
     safe_quit()
     return instance_index
 
