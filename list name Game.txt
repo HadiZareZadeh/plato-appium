@@ -8,9 +8,9 @@ brawlbots
 checkers
 chess
 conquest
-cibbage
+cribbage
 cup pong
-daets
+darts
 dice party
 disc-o
 dominoes
