@@ -909,6 +909,11 @@ def check_for_reset_log_file():
         sleep(60)
 
 
+def clear_done_instances():
+    global done_instances
+    done_instances.clear()
+
+
 def initialize_log():
     all_instances = list_ldplayer_instances()
     os.makedirs("done/", exist_ok=True)
@@ -920,7 +925,7 @@ def initialize_log():
         except (FileNotFoundError, json.JSONDecodeError):
             with open(get_file_done_path_for_instance(instance_index), "w") as file:
                 json.dump({}, file)
-    schedule.every().day.at("03:30").do(done_instances.clear)
+    schedule.every().day.at("03:30").do(clear_done_instances)
     schedule.every().day.at("03:30").do(reset_log_file)
     th = threading.Thread(target=check_for_reset_log_file, daemon=True)
     th.start()
@@ -953,7 +958,8 @@ def log_processed_app(instance_index: str, app_name: str):
 
 def reset_log_file():
     all_instances = list_ldplayer_instances()
-    for instance_index in all_instances:
+    for instance in all_instances:
+        instance_index = instance["index"]
         with open(get_file_done_path_for_instance(instance_index), "w") as file:
             json.dump({}, file)
 
@@ -977,13 +983,14 @@ def main():
                     done_instance = future.result()
                     all_instances.append(done_instance)
                     next_intance = all_instances.pop(0)
-                    print(f"Resubmitting LDPlayer instance {next_intance}")
                     futures.remove(future)
                     if next_intance["index"] not in done_instances:
+                        logging.info(
+                            f"Resubmitting LDPlayer instance {next_intance}")
                         futures.append(executor.submit(
                             run_instance, next_intance))
                 if len(futures) == 0:
-                    while len(done_instances) == len(all_instances):
+                    while len(done_instances) == len(_all_instances):
                         sleep(1)
                     all_instances = deepcopy(_all_instances)
                     break
