@@ -565,8 +565,8 @@ def play_latest_rank_season(d: webdriver.Remote):
                 try:
                     txt = matchmaking_title.text
                     if 'rank' in txt.lower() and txt not in [x[1] for x in found_matchmaking_buttons]:
-                        found_matchmaking_buttons.append(
-                            (matchmaking_title, txt))
+                        found_matchmaking_buttons.append([matchmaking_title, txt, int(
+                            re.findall(r'\d+', txt.lower().split('season')[1])[0])])
                         found_new = True
                 except Exception as e:
                     pass
@@ -575,7 +575,7 @@ def play_latest_rank_season(d: webdriver.Remote):
             for _ in range(4):
                 d.press_keycode(20)
         if len(found_matchmaking_buttons) > 0:
-            found_matchmaking_buttons[-1][0].click()
+            max(found_matchmaking_buttons, key=lambda x: x[2])[0].click()
             break
         else:
             if time.time() - s > 30:
