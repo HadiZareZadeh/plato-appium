@@ -889,9 +889,11 @@ def run_instance(instance: dict):
                 # sleep(2)
                 # device_id = launch_instance(instance)
                 # run_appium_server(instance_appium_port)
-    if instance_is_done:
-        done_instances.append(instance_index)
     safe_quit()
+    if not instance_is_done:
+        return run_instance(instance)
+    else:
+        done_instances.append(instance_index)
     return instance
 
 
@@ -967,32 +969,16 @@ def reset_log_file():
 def main():
     done_instances.clear()
     initialize_log()
-    from copy import deepcopy
-    _all_instances = list_ldplayer_instances()
-    all_instances = deepcopy(_all_instances)
+    all_instances = list_ldplayer_instances()
     max_workers = min(config['total_launched_instances'], len(all_instances))
     start_consumer_thread()
     while True:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(
-                run_instance, all_instances.pop(0)) for _ in range(max_workers)]
-            while True:
-                done, undone = concurrent.futures.wait(
-                    futures, return_when=concurrent.futures.FIRST_COMPLETED)
-                for future in done:
-                    done_instance = future.result()
-                    all_instances.append(done_instance)
-                    next_intance = all_instances.pop(0)
-                    futures.remove(future)
-                    if next_intance["index"] not in done_instances:
-                        logging.info(f"Resubmitting LDPlayer instance {next_intance}")
-                        futures.append(executor.submit(
-                            run_instance, next_intance))
-                if len(futures) == 0:
-                    while len(done_instances) == len(_all_instances):
-                        sleep(1)
-                    all_instances = deepcopy(_all_instances)
-                    break
+            futures = [executor.submit(run_instance, i) for i in all_instances]
+            done, undone = concurrent.futures.wait(
+                futures, return_when=concurrent.futures.ALL_COMPLETED)
+            while len(done_instances) == len(all_instances):
+                sleep(1)
     # coin_data_queue.join()
     # stop_consumer_thread()
 
