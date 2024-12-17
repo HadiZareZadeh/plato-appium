@@ -5,7 +5,7 @@ import os
 import psutil
 
 # مسیر پوشه پروژه
-project_folder = r"C:\Users\moj\Desktop\appium"
+project_folder = os.path.dirname(os.path.abspath(__file__))
 main_script = os.path.join(project_folder, "make coins - go fish.py")
 
 # فایل‌های دیگر که باید قبل از اجرای فایل اصلی اجرا شوند
