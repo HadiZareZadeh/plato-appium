@@ -11,8 +11,8 @@ main_script = os.path.join(project_folder, "make coins - go fish.py")
 # فایل‌های دیگر که باید قبل از اجرای فایل اصلی اجرا شوند
 stop_scripts = [
     os.path.join(project_folder, "stop msi.py"),
-    os.path.join(project_folder, "stop instances.py"),
     os.path.join(project_folder, "stop servers.py"),
+    os.path.join(project_folder, "stop instances.py"),
     os.path.join(project_folder, "stop emulator.py")
 ]
 
