@@ -562,7 +562,7 @@ def set_profile(d: webdriver.Remote):
         (By.ID, 'input_edit_text'))).clear()
     sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
-        (By.ID, 'input_edit_text'))).send_keys("""رنک آپ_وین فیک_فروش آیتم شاپ_شارژ پیپ و سکه                                         Tel @platocat""")
+        (By.ID, 'input_edit_text'))).send_keys("""وین فیک_فروش آیتم شاپ و کمیاب_رنک آپ                                         Tel @platocat""")
     sleep(1)
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.XPATH, '//android.widget.Button[@resource-id="android:id/button1"]'))).click()
