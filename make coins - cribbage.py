@@ -865,7 +865,6 @@ def run_instance(instance: dict):
     d = start_appium_session(instance_appium_port, instance_system_port,
                                 instance_adb_port, device_id, installed_platos[0], app_activity)
     mute_ld_player(d)
-    d.terminate_app(package_name)
     d.quit()
 
 
