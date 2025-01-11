@@ -9,3 +9,4 @@ git clone %REPO_URL% temp
 move temp\* .
 move temp\.* .
 rmdir /s /q temp
+pause
