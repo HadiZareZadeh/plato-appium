@@ -99,7 +99,6 @@ def coin_balance_consumer():
             break
         save_coin_balance(instance_name, package_name, balance, COIN_FILENAME)
         coin_data_queue.task_done()
-        schedule.run_pending()
 
 
 def save_to_queue(instance_name: str, package_name: str, balance: str):

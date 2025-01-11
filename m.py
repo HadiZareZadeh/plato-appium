@@ -99,7 +99,6 @@ def coin_balance_consumer():
             break
         save_coin_balance(instance_name, package_name, balance, COIN_FILENAME)
         coin_data_queue.task_done()
-        schedule.run_pending()
 
 
 def save_to_queue(instance_name: str, package_name: str, balance: str):
@@ -865,8 +864,11 @@ def run_instance(instance: dict):
     d = start_appium_session(instance_appium_port, instance_system_port,
                                 instance_adb_port, device_id, installed_platos[0], app_activity)
     mute_ld_player(d)
-    d.quit()
-
+    try:
+        d.quit()
+    except:
+        pass
+    
     import random
     random.shuffle(installed_platos)
 
@@ -877,12 +879,14 @@ def run_instance(instance: dict):
             continue
         retry = 3
         while 1:
+            error_type = 1
             try:
                 logging.info(
                     f"Starting Appium session on the device on instance {instance_name} for {package_name} app")
                 d = start_appium_session(instance_appium_port, instance_system_port,
                                          instance_adb_port, device_id, package_name, app_activity)
                 handle_system_ui_not_responding(d)
+                error_type = 2
                 logging.info(f"launching app {package_name}")
                 d.activate_app(package_name)
                 click_lets_go(d)
@@ -911,13 +915,19 @@ def run_instance(instance: dict):
                 break
             except Exception as e:
                 retry -= 1
-                logging.error(
-                    f"failed to launch app on instance {instance_name} for {package_name} -------------- {e}")
-                try:
-                    d.terminate_app(package_name)
-                    d.quit()
-                except:
-                    pass
+                if error_type == 1:
+                    safe_quit()
+                    sleep(2)
+                    device_id = launch_instance(instance)
+                    run_appium_server(instance_appium_port)
+                if error_type == 2:
+                    logging.error(
+                        f"failed to launch app on instance {instance_name} for {package_name} -------------- {e}")
+                    try:
+                        d.terminate_app(package_name)
+                        d.quit()
+                    except:
+                        pass
                 if retry <= 0:
                     break
 
