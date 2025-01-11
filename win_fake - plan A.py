@@ -419,7 +419,7 @@ def resign_from_game(d:  webdriver.Remote):
         if size['width'] > size['height']:
             tap_using_percent(d, 0.6, 0.79)
         else:
-            tap_using_percent(d, 0.65, 0.30)
+            tap_using_percent(d, 0.65, 0.53)
             tap_using_percent(d, 0.75, 0.60)
             tap_using_percent(d, 0.75, 0.65)
             tap_using_percent(d, 0.75, 0.685)

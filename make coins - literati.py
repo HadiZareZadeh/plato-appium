@@ -384,6 +384,15 @@ def handle_system_ui_not_responding(d: webdriver.Remote):
         pass
 
 
+def mute_ld_player(d: webdriver.Remote):
+    try:
+        for _ in range(10):
+            d.press_keycode(25)
+            time.sleep(0.1)
+    except Exception as e:
+        pass
+
+
 def is_game_favorite(d: webdriver.Remote, game_name: str):
     go_to_home_tab(d)
     fs = WebDriverWait(d, 30).until(EC.visibility_of_element_located(
@@ -669,17 +678,23 @@ def resign_from_game(d:  webdriver.Remote):
         (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Resign")'))).click()
     sleep(1)
     size = d.get_window_size()
-    if 'match monsters' == config['win_fake_game'].lower():
+    if config['win_fake_game'].lower() in ['match monsters']:
         tap_using_percent(d, 0.25, 0.40)
         tap_using_percent(d, 0.25, 0.45)
         tap_using_percent(d, 0.25, 0.485)
         tap_using_percent(d, 0.25, 0.52)
-    elif 'dots & boxes' == config['win_fake_game'].lower():
+    elif config['win_fake_game'].lower() in ['ludo']:
+        tap_using_percent(d, 0.25, 0.53)
+        tap_using_percent(d, 0.25, 0.57)
+        tap_using_percent(d, 0.25, 0.6)
+        tap_using_percent(d, 0.25, 0.63)
+    elif config['win_fake_game'].lower() in ['dots & boxes']:
         tap_using_percent(d, 0.75, 0.6)
     else:
         if size['width'] > size['height']:
             tap_using_percent(d, 0.6, 0.79)
         else:
+            tap_using_percent(d, 0.65, 0.53)
             tap_using_percent(d, 0.75, 0.60)
             tap_using_percent(d, 0.75, 0.65)
             tap_using_percent(d, 0.75, 0.685)
@@ -847,6 +862,11 @@ def run_instance(instance: dict):
     logging.info(f"Starting Appium Server for instance: {instance_name}")
     run_appium_server(instance_appium_port)
     installed_platos = list_installed_plato(device_id, instance_adb_port)
+    d = start_appium_session(instance_appium_port, instance_system_port,
+                                instance_adb_port, device_id, installed_platos[0], app_activity)
+    mute_ld_player(d)
+    d.terminate_app(package_name)
+    d.quit()
 
     import random
     random.shuffle(installed_platos)
