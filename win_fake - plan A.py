@@ -93,7 +93,7 @@ def list_ldplayer_instances():
         instance_names.append({
             "index": line[0],
             "name": line[1],
-            "status": line[5] != "-1",
+            "status": line[5] != "-2",
             "appium_port": appium_port,
             "system_port": system_port,
             "adb_port": adb_port,

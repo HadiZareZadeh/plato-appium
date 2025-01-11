@@ -87,6 +87,7 @@ def find_process_by_port(port):
 coin_data_queue = queue.Queue()
 coin_file_lock = threading.Lock()
 COIN_FILENAME = "coin_balance.xlsx"
+COIN_FILENAME_TEMP = "coin_balance - copy.xlsx"
 coin_consumer_thread: threading.Thread = None
 reset_log_file_thread: threading.Thread = None
 
@@ -135,6 +136,9 @@ def save_coin_balance(instance_name: str, package_name: str, balance: str, filen
     with coin_file_lock:
         if os.path.exists(filename):
             df = pd.read_excel(filename)
+            if os.path.exists(COIN_FILENAME_TEMP):
+                os.remove(COIN_FILENAME_TEMP)
+            os.rename(filename, COIN_FILENAME_TEMP)
         else:
             df = pd.DataFrame()
         if package_column not in df.columns:
@@ -196,17 +200,22 @@ def save_coin_balance(instance_name: str, package_name: str, balance: str, filen
                 ws[f"{summary_col_letter}{row_offset}"] = f"{col_name.split(' - ')[0]} - {instance_total}"
                 row_offset += 1
 
+        sum_counts = 0
         # 3. Count balances by range
         for lower in range(0, 10001, 500):
             upper = lower + 499 if lower < 10000 else float('inf')
             count = sum(
-                (df[col] > lower) & (df[col] <= upper)
+                (df[col] >= lower) & (df[col] <= upper)
                 for col in df.columns if "Balance" in col
             ).sum()
+            sum_counts += count
             range_text = f"{lower} and {upper}: {count}" if upper != float(
                 'inf') else f"Above 10000: {count}"
             ws[f"{summary_col_letter}{row_offset}"] = range_text
             row_offset += 1
+        
+        ws[f"{summary_col_letter}{row_offset}"] = f"total accounts: {sum_counts}"
+        row_offset += 1
 
         wb.save(filename)
 
@@ -363,6 +372,16 @@ def start_appium_session(appium_port, system_port, adb_port, device_id, packageN
     driver = webdriver.Remote(
         f'http://localhost:{appium_port}', options=UiAutomator2Options().load_capabilities(desired_caps))
     return driver
+
+
+def handle_system_ui_not_responding(d: webdriver.Remote):
+    try:
+        close_app_button = d.find_element(AppiumBy.ANDROID_UIAUTOMATOR,
+            'new UiSelector().text("Close app")'
+        )
+        close_app_button.click()
+    except Exception:
+        pass
 
 
 def is_game_favorite(d: webdriver.Remote, game_name: str):
@@ -844,6 +863,7 @@ def run_instance(instance: dict):
                     f"Starting Appium session on the device on instance {instance_name} for {package_name} app")
                 d = start_appium_session(instance_appium_port, instance_system_port,
                                          instance_adb_port, device_id, package_name, app_activity)
+                handle_system_ui_not_responding(d)
                 logging.info(f"launching app {package_name}")
                 d.activate_app(package_name)
                 click_lets_go(d)
