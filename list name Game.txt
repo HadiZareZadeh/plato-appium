@@ -10,6 +10,7 @@ chess
 conquest
 cribbage
 cup pong
+carrom
 darts
 dice party
 disc-o

@@ -92,6 +92,13 @@ coin_consumer_thread: threading.Thread = None
 reset_log_file_thread: threading.Thread = None
 
 
+def backup_coin_excel():
+    import shutil
+    with coin_file_lock:
+        shutil.copy(COIN_FILENAME, COIN_FILENAME_TEMP)
+
+schedule.every(15).minutes.do(backup_coin_excel)
+
 def coin_balance_consumer():
     while True:
         instance_name, package_name, balance = coin_data_queue.get()
@@ -135,9 +142,6 @@ def save_coin_balance(instance_name: str, package_name: str, balance: str, filen
     with coin_file_lock:
         if os.path.exists(filename):
             df = pd.read_excel(filename)
-            if os.path.exists(COIN_FILENAME_TEMP):
-                os.remove(COIN_FILENAME_TEMP)
-            os.rename(filename, COIN_FILENAME_TEMP)
         else:
             df = pd.DataFrame()
         if package_column not in df.columns:
@@ -950,7 +954,7 @@ def get_file_done_path_for_instance(instance_index: str):
 def check_for_reset_log_file():
     while True:
         schedule.run_pending()
-        sleep(60)
+        sleep(20)
 
 
 def clear_done_instances():
