@@ -64,7 +64,7 @@ def run_main_script():
         print(f"Main script not found: {main_script}")
 
 # زمان‌بندی اجرای فایل اصلی
-schedule.every().day.at("03:31").do(run_main_script)
+schedule.every().day.at("19:00").do(run_main_script)
 
 print("Scheduled task is running. Waiting for the specified time. Press Ctrl+C to exit.")
 

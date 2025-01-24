@@ -93,7 +93,7 @@ def list_ldplayer_instances():
         instance_names.append({
             "index": line[0],
             "name": line[1],
-            "status": line[5] != "-2",
+            "status": line[5] != "-1",
             "appium_port": appium_port,
             "system_port": system_port,
             "adb_port": adb_port,
@@ -356,7 +356,7 @@ def play_latest_rank_season(d: webdriver.Remote):
                     pass
             if not found_new:
                 break
-            for _ in range(4):
+            for _ in range(5):
                 d.press_keycode(20)
         if len(found_matchmaking_buttons) > 0:
             found_matchmaking_buttons[-1][0].click()
@@ -396,6 +396,34 @@ def tap_using_percent(d: webdriver.Remote, x_percent: float, y_percent: float):
     d.tap([(x, y)], 10)
 
 
+def check_location_color_blue(d: webdriver.Remote, xx, yy):
+    from PIL import Image, ImageDraw
+
+    screenshot = d.get_screenshot_as_png()
+    image = Image.open(io.BytesIO(screenshot))
+    width, height = image.size
+    x = int(width * xx)
+    y = int(height * yy)
+    pixel_color = image.getpixel((x, y))
+
+    # blue = (0, 0, 255)
+
+    # def color_distance(c1, c2):
+    #     return sum((a - b) ** 2 for a, b in zip(c1, c2)) ** 0.5
+    # distance_to_blue = color_distance(pixel_color, blue)
+
+    #draw = ImageDraw.Draw(image)
+    #r = 10
+    #draw.ellipse((x - r, y - r, x + r, y + r), outline="red", width=3)
+    #image.show()
+
+    return pixel_color[2] > 200 and pixel_color[1] < 200 and pixel_color[0] < 200
+    # if 150 > distance_to_blue:
+    #     return True
+    # else:
+    #     return False
+
+
 def resign_from_game(d:  webdriver.Remote):
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'plato_button_hamburger'))).click()
@@ -403,27 +431,37 @@ def resign_from_game(d:  webdriver.Remote):
         (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Resign")'))).click()
     sleep(1)
     size = d.get_window_size()
+    locations = []
     if config['win_fake_game'].lower() in ['match monsters']:
-        tap_using_percent(d, 0.25, 0.40)
-        tap_using_percent(d, 0.25, 0.45)
-        tap_using_percent(d, 0.25, 0.485)
-        tap_using_percent(d, 0.25, 0.52)
+        locations = [
+            (0.25, 0.52),
+        ]
     elif config['win_fake_game'].lower() in ['ludo']:
-        tap_using_percent(d, 0.25, 0.53)
-        tap_using_percent(d, 0.25, 0.57)
-        tap_using_percent(d, 0.25, 0.6)
-        tap_using_percent(d, 0.25, 0.63)
+        locations = [
+            (0.25, 0.6),
+        ]
     elif config['win_fake_game'].lower() in ['dots & boxes']:
-        tap_using_percent(d, 0.75, 0.6)
+        locations = [
+            (0.75, 0.6),
+        ]
     else:
         if size['width'] > size['height']:
-            tap_using_percent(d, 0.6, 0.79)
+            locations = [
+                (0.6, 0.79),
+            ]
         else:
-            tap_using_percent(d, 0.65, 0.53)
-            tap_using_percent(d, 0.75, 0.60)
-            tap_using_percent(d, 0.75, 0.65)
-            tap_using_percent(d, 0.75, 0.685)
-            tap_using_percent(d, 0.75, 0.72)
+            for x, y in [
+                (0.6, 0.53),
+                (0.6, 0.60),
+                (0.6, 0.65),
+                (0.6, 0.685),
+                (0.6, 0.72),
+            ]:
+                if check_location_color_blue(d, x, y):
+                    tap_using_percent(d, x, y)
+                    break
+    for x, y in locations:
+        tap_using_percent(d, x, y)
     sleep(0.7)
     d.back()
 
@@ -627,7 +665,8 @@ def launch_instance(instance: dict):
         with launch_instance_appium_server_lock:
             while retry > 0:
                 try:
-                    logging.info(f"Launching LDPlayer instance: {instance_name}")
+                    logging.info(
+                        f"Launching LDPlayer instance: {instance_name}")
                     launch_ldplayer_instance_by_index(
                         instance_index, instance_adb_port)
                     device_id = wait_for_new_LDPlayer_instance_to_appear_as_a_device(
@@ -672,7 +711,8 @@ def run_instance(instance: dict):
     installed_platos = list_installed_plato(device_id, instance_adb_port)
     installed_platos = installed_platos[:config['number_of_apps_for_win_fake']]
     friend_name = ''
-    last_launched_times = {package_name:0 for package_name in installed_platos}
+    last_launched_times = {
+        package_name: 0 for package_name in installed_platos}
     installed_platos_cycle = itertools.cycle(installed_platos)
     while config['total_win_fake'] > 0:
         package_name = next(installed_platos_cycle)
@@ -685,7 +725,7 @@ def run_instance(instance: dict):
                 logging.info(
                     f"Starting Appium session on the device on instance {instance_name} for {package_name} app")
                 d = start_appium_session(instance_appium_port, instance_system_port,
-                        instance_adb_port, device_id, package_name, app_activity)
+                                         instance_adb_port, device_id, package_name, app_activity)
                 logging.info(f"launching app {package_name}")
                 d.activate_app(package_name)
                 friend_name = add_friend(d)
