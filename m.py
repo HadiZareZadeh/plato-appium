@@ -453,7 +453,7 @@ def is_rank_game_played(d: webdriver.Remote):
             sleep(0.3)
     try:
         won_games = float(won_games)
-        return won_games == 2
+        return won_games == 1
     except:
         pass
     return False
