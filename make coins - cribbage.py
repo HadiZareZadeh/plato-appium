@@ -607,7 +607,7 @@ def play_latest_rank_season(d: webdriver.Remote):
             for _ in range(4):
                 d.press_keycode(20)
         if len(found_matchmaking_buttons) > 0:
-            found_matchmaking_buttons[0].click()
+            found_matchmaking_buttons[0][0].click()
             # max(found_matchmaking_buttons, key=lambda x: x[2])[0].click()
             break
         else:
