@@ -417,7 +417,7 @@ def check_location_color_blue(d: webdriver.Remote, xx, yy):
     #draw.ellipse((x - r, y - r, x + r, y + r), outline="red", width=3)
     #image.show()
 
-    return pixel_color[2] > 200 and pixel_color[1] < 200 and pixel_color[0] < 200
+    return pixel_color[2] > 170 and pixel_color[1] < 170 and pixel_color[0] < 170
     # if 150 > distance_to_blue:
     #     return True
     # else:
