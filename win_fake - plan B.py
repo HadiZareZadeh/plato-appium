@@ -424,7 +424,7 @@ def check_location_color_blue(d: webdriver.Remote, xx, yy):
     #     return False
 
 
-def resign_from_game(d:  webdriver.Remote):
+def resign_from_game(d:  webdriver.Remote, win_fake_game: str):
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'plato_button_hamburger'))).click()
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
@@ -432,15 +432,15 @@ def resign_from_game(d:  webdriver.Remote):
     sleep(1)
     size = d.get_window_size()
     locations = []
-    if config['win_fake_game'].lower() in ['match monsters']:
+    if win_fake_game.lower() in ['match monsters']:
         locations = [
             (0.25, 0.52),
         ]
-    elif config['win_fake_game'].lower() in ['ludo']:
+    elif win_fake_game.lower() in ['ludo']:
         locations = [
             (0.25, 0.6),
         ]
-    elif config['win_fake_game'].lower() in ['dots & boxes']:
+    elif win_fake_game.lower() in ['dots & boxes']:
         locations = [
             (0.75, 0.6),
         ]
@@ -493,7 +493,7 @@ def go_to_friend_tab(d: webdriver.Remote):
         (By.ID, 'plato_image_people'))).click()
 
 
-def add_friend(d: webdriver.Remote):
+def add_friend(d: webdriver.Remote, win_fake: dict):
     go_to_friend_tab(d)
     retry = 3
     while 1:
@@ -514,9 +514,9 @@ def add_friend(d: webdriver.Remote):
             sleep(.5)
             go_to_friend_tab(d)
             sleep(.5)
-    init_config()
+    # init_config()
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
-        (By.ID, 'plato_conversation_chat_box'))).send_keys(config['friend_link'])
+        (By.ID, 'plato_conversation_chat_box'))).send_keys(win_fake['friend_link'])
     WebDriverWait(d, 5).until(EC.visibility_of_element_located(
         (By.ID, 'plato_button_send'))).click()
     sleep(5)
@@ -533,7 +533,7 @@ def add_friend(d: webdriver.Remote):
     return friend_name
 
 
-def create_game_with_friend(d: webdriver.Remote, friend_name: str):
+def create_game_with_friend(d: webdriver.Remote, friend_name: str, win_fake:dict):
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (By.ID, 'play_with_friend_label'))).click()
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
@@ -559,7 +559,7 @@ def create_game_with_friend(d: webdriver.Remote, friend_name: str):
     except Exception as e:
         pass
 
-    if 'chess' in config['win_fake_game']:
+    if 'chess' in win_fake['win_fake_game']:
         xpath = "//android.widget.LinearLayout//android.widget.LinearLayout//android.widget.TextView[@text='WHITE']"
         try:
             d.find_element(By.XPATH, xpath).click()
@@ -687,7 +687,7 @@ def launch_instance(instance: dict):
             sleep(10)
 
 
-def run_instance(instance: dict):
+def run_instance(instance: dict, win_fake: dict):
     app_activity = 'com.playchat.ui.activity.MainActivity'
     instance_index = instance["index"]
     instance_name = instance["name"]
@@ -721,8 +721,8 @@ def run_instance(instance: dict):
                                          instance_adb_port, device_id, package_name, app_activity)
                 logging.info(f"launching app {package_name}")
                 d.activate_app(package_name)
-                friend_name = add_friend(d)
-                select_game(d, config['win_fake_game'])
+                friend_name = add_friend(d, win_fake)
+                select_game(d, win_fake['win_fake_game'])
                 d.quit()
             break
         except Exception as e:
@@ -742,7 +742,7 @@ def run_instance(instance: dict):
     installed_platos_cycle = itertools.cycle(installed_platos)
     last_launched_times = {package_name:0 for package_name in installed_platos}
 
-    while config['total_win_fake'] > 0:
+    while win_fake['total_win_fake'] > 0:
         package_name = next(installed_platos_cycle)
         if last_launched_times[package_name] + 60 > time.time():
             sleep(1)
@@ -758,18 +758,18 @@ def run_instance(instance: dict):
                 d.activate_app(package_name)
                 sleep(.5)
                 for _ in range(5):
-                    if config['total_win_fake'] <= 0:
+                    if win_fake['total_win_fake'] <= 0:
                         break
                     create_game_with_friend(d, friend_name)
-                    if not any([x.lower() in config['win_fake_game'].lower() for x in ['archery', 'gin rummy', 'dungeon tales', 'wordbox', 'plox', 'go fish', 'chess']]):
-                        if any([x.lower() in config['win_fake_game'].lower() for x in ['brawlbots']]):
+                    if not any([x.lower() in win_fake['win_fake_game'].lower() for x in ['archery', 'gin rummy', 'dungeon tales', 'wordbox', 'plox', 'go fish', 'chess']]):
+                        if any([x.lower() in win_fake['win_fake_game'].lower() for x in ['brawlbots']]):
                             sleep(12)
                         else:
                             sleep(11)
                         resign_from_game(d)
                     else:
                         d.back()
-                    config['total_win_fake'] -= 1
+                    win_fake['total_win_fake'] -= 1
                     save_config()
                     d.back()
                 d.quit()
@@ -790,7 +790,7 @@ def run_instance(instance: dict):
                 logging.info(f"launching app {package_name}")
                 d.activate_app(package_name)
                 friend_name = add_friend(d)
-                select_game(d, config['win_fake_game'])
+                select_game(d, win_fake['win_fake_game'])
                 d.quit()
                 # if retry <= 0:
                 #     safe_quit()
@@ -813,11 +813,13 @@ def main():
     all_instances = list_ldplayer_instances(
     )[1:config['number_of_instances_for_win_fake']+1]
     max_workers = config['number_of_instances_for_win_fake']
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(run_instance, instance)
-                   for instance in all_instances]
-        for future in concurrent.futures.as_completed(futures):
-            future.result()
+    for win_fake in config['games']:
+        if win_fake['total_win_fake'] > 0:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = [executor.submit(run_instance, instance, win_fake)
+                        for instance in all_instances]
+                for future in concurrent.futures.as_completed(futures):
+                    future.result()
 
 
 if __name__ == "__main__":
