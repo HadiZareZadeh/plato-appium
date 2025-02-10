@@ -437,34 +437,6 @@ def check_location_color_blue(d: webdriver.Remote, xx, yy):
     #image.show()
 
     return pixel_color[2] > 170 and pixel_color[1] < 170 and pixel_color[0] < 170
-    # if 150 > distance_to_blue:
-    #     return True
-    # else:
-    #     return False
-
-
-def check_location_color_green(d: webdriver.Remote, xx, yy):
-    from PIL import Image, ImageDraw
-
-    screenshot = d.get_screenshot_as_png()
-    image = Image.open(io.BytesIO(screenshot))
-    width, height = image.size
-    x = int(width * xx)
-    y = int(height * yy)
-    pixel_color = image.getpixel((x, y))
-
-    # blue = (0, 0, 255)
-
-    # def color_distance(c1, c2):
-    #     return sum((a - b) ** 2 for a, b in zip(c1, c2)) ** 0.5
-    # distance_to_blue = color_distance(pixel_color, blue)
-
-    #draw = ImageDraw.Draw(image)
-    #r = 10
-    #draw.ellipse((x - r, y - r, x + r, y + r), outline="red", width=3)
-    #image.show()
-
-    return pixel_color[2] < 30 and pixel_color[1] < 130 and pixel_color[1] > 100  and pixel_color[0] < 110 and pixel_color[0] > 80 
 
 
 def resign_from_game(d:  webdriver.Remote, win_fake_game: str):
@@ -487,6 +459,14 @@ def resign_from_game(d:  webdriver.Remote, win_fake_game: str):
         locations = [
             (0.75, 0.6),
         ]
+    elif win_fake_game.lower() in ['conquest']:
+        locations = [
+            (0.64, 0.7),
+        ]
+    elif win_fake_game.lower() in ['legions']:
+        locations = [
+            (0.6, 0.62),
+        ]
     else:
         if size['width'] > size['height']:
             locations = [
@@ -494,16 +474,12 @@ def resign_from_game(d:  webdriver.Remote, win_fake_game: str):
             ]
         else:
             for x, y in [
-                (0.6, 0.62),
                 (0.6, 0.53),
                 (0.6, 0.60),
                 (0.6, 0.65),
                 (0.6, 0.685),
                 (0.6, 0.72),
             ]:
-                if check_location_color_green(d, x, y):
-                    tap_using_percent(d, x, y)
-                    break
                 if check_location_color_blue(d, x, y):
                     tap_using_percent(d, x, y)
                     break
@@ -815,7 +791,7 @@ def run_instance(instance: dict, win_fake: dict):
                             sleep(12)
                         else:
                             sleep(11)
-                        resign_from_game(d)
+                        resign_from_game(d, win_fake['win_fake_game'])
                     else:
                         d.back()
                     win_fake['total_win_fake'] -= 1
