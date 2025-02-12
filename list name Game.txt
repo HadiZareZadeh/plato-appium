@@ -36,4 +36,5 @@ sea battle
 skeeball
 table soccer
 truco
+viking chess
 wordbox
