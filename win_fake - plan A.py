@@ -445,6 +445,9 @@ def resign_from_game(d:  webdriver.Remote, win_fake_game: str):
     WebDriverWait(d, 10).until(EC.visibility_of_element_located(
         (AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("Resign")'))).click()
     sleep(1)
+    if win_fake_game.lower() in ['viking chess']:
+        d.back()
+        return
     size = d.get_window_size()
     locations = []
     if win_fake_game.lower() in ['match monsters']:
@@ -759,8 +762,8 @@ def run_instance(instance: dict, win_fake: dict):
                     if win_fake['total_win_fake'] <= 0:
                         break
                     create_game_with_friend(d, friend_name, win_fake)
-                    if not any([x.lower() in win_fake['win_fake_game'].lower() for x in ['archery', 'gin rummy', 'dungeon tales', 'wordbox', 'plox', 'go fish', 'chess']]):
-                        if any([x.lower() in win_fake['win_fake_game'].lower() for x in ['brawlbots']]):
+                    if not any([x.lower() == win_fake['win_fake_game'].lower() for x in ['archery', 'gin rummy', 'dungeon tales', 'wordbox', 'plox', 'go fish', 'chess']]):
+                        if any([x.lower() == win_fake['win_fake_game'].lower() for x in ['brawlbots']]):
                             sleep(12)
                         else:
                             sleep(11)
